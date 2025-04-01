@@ -7,7 +7,7 @@ public class ClientMain extends GameApplication {
 
     @Override
     protected void initSettings(GameSettings settings) {
-        settings.setTitle("Java Kartenspiel Client");
+        settings.setTitle("Myth Cards");
         settings.setWidth(1280);
         settings.setHeight(720);
     }
