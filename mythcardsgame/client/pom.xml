@@ -1,0 +1,71 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>com.markwachtel</groupId>
+        <artifactId>mythcardsgame</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>client</artifactId>
+    <name>Myth Cards - Client</name>
+
+    <dependencies>
+        <!-- Common-Module -->
+        <dependency>
+            <groupId>com.markwachtel</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- JavaFX-Abhängigkeiten (Beispiel: v21) -->
+        <!-- Die genauen Artefaktnamen können sich je nach Maven Repo unterscheiden -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <!-- Falls du Audio/Media verwenden willst, ggf. javafx-media hinzufügen -->
+
+        <!-- FXGL-Abhängigkeit (Beispiel: 17.2) -->
+        <dependency>
+            <groupId>com.github.almasb</groupId>
+            <artifactId>fxgl</artifactId>
+            <version>${fxgl.version}</version>
+        </dependency>
+
+        <!-- Weitere Libraries falls nötig -->
+    </dependencies>
+
+    <!-- Optional: Plugins zum Erstellen einer ausführbaren Jar -->
+    <build>
+        <plugins>
+            <!-- Beispiel: Maven Shade Plugin zum Zusammenführen in ein Jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
