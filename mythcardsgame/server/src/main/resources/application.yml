@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/myth_cards
+    username: root
+    password: Le@gueOfLegendz2018!
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${jwt.secret}
+
+jwt:
+  secret: deinSuperSichererGeheimerSchlüssel1234567890
+  exp: PT1H
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.security: DEBUG
