@@ -49,6 +49,8 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        
+        
     </build>
 
     <!-- Dependencies, die ALLE Module evtl. brauchen:
@@ -59,5 +61,7 @@
             <!-- Versionsverwaltung der Abhängigkeiten für Sub-Module -->
         </dependencies>
     </dependencyManagement>
+
+
 
 </project>
