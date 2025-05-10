@@ -21,6 +21,7 @@ import com.almasb.fxgl.dsl.FXGL;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
@@ -57,10 +58,12 @@ public class ClientMain extends GameApplication {
         settings.setTitle("Myth Cards Client");
         settings.setWidth(1280);
         settings.setHeight(720);
+        settings.getCSSList().add("chat.css"); 
     }
 
     @Override
     protected void initGame() {
+    	  
         String savedUser = prefs.get("username", null);
         String savedPass = prefs.get("password", null);
         if (savedUser != null && savedPass != null) {
@@ -202,14 +205,20 @@ public class ClientMain extends GameApplication {
     }
 
     private void showCardTest() {
-        CardData card = CardDataFetcher.fetchCardData(1); // z. B. Testkarte mit ID 1
+        // 1) Testkarte holen
+        CardData card = CardDataFetcher.fetchCardData(1);
         if (card == null) {
             FXGL.getDialogService().showMessageBox("Fehler beim Laden der Testkarte!");
             return;
         }
 
-        MonsterCardView view = new MonsterCardView();
-        Group cardNode = view.build(card);
+        // 2) Texte registrieren
+        CardLocalization.register(card);
+
+        // 3) Ansicht erzeugen
+        Node cardNode = new CardView(card);
+
+        // 4) Szene aufräumen und Karte anzeigen
         FXGL.getGameScene().clearUINodes();
         FXGL.addUINode(cardNode);
     }

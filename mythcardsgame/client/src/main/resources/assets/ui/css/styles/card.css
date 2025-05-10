@@ -1,0 +1,21 @@
+/* Karten‑Root */
+.card-root {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 8, 0.1, 0, 2);
+}
+.card-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-fill: #E8E6E3;
+}
+.ability-text {
+    -fx-fill: #E8E6E3;
+    -fx-font-size: 10px;
+    -fx-text-alignment: center;
+}
+.stat-text {
+    -fx-fill: #E8E6E3;
+    -fx-font-size: 10px;
+}
+.ability-box:hover {
+    -fx-cursor: hand;
+}

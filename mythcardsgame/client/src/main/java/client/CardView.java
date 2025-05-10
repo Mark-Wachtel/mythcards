@@ -1,22 +1,41 @@
 package client;
 
+import java.util.List;
+import java.util.Objects;
+
+import com.almasb.fxgl.animation.AnimationBuilder;
 import com.almasb.fxgl.dsl.FXGL;
+import com.almasb.fxgl.dsl.components.DraggableComponent;
+import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.texture.Texture;
 
 import common.CardData;
-import javafx.scene.Group;
-import javafx.scene.image.ImageView;
+import javafx.animation.Interpolator;
+import javafx.event.EventType;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.SVGPath;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
+import javafx.scene.image.ImageView;
+import javafx.util.Duration;
 
 /**
- * Full recreation of the Monster‑Card SVG in pure JavaFX/FXGL.
- * <p>
- * Generated: 2025‑04‑22
+ * Pure view‑layer for a MythCards card.
+ * <p>Fixed size 180 × 270 px; scaling (hover, inspect, mini) is done via
+ * {@code setScaleX/Y()} by the caller.</p>
  */
-public class MonsterCardView {
+public final class CardView extends StackPane {
 
+    public static final double CARD_W = 180;
+    public static final double CARD_H = 270;
+    
     /* === Raw path data from the original SVG === */
     private static final String MONSTER_CLIP_D = """
 M 177.92,326.50            C 177.92,326.50 206.18,326.50 206.18,326.50              206.18,326.50 208.48,326.35 208.48,326.35              208.48,326.35 249.33,326.35 249.33,326.35                249.33,326.35 295.55,326.66      295.55,326.66              295.55,326.66 315.97,326.50 315.97,326.50              315.97,326.50 354.05,326.35 354.05,326.35              354.05,326.35 399.05,326.35 399.05,326.35                399.05,326.35 433.60,326.50  433.60,326.50                 433.60,326.50 473.52,326.50 473.52,326.50              473.52,326.50 495.48,326.50 495.48,326.50              495.48,326.50 505.62,325.28 505.62,325.28                505.62,325.28 516.21,321.28  516.21,321.28              516.21,321.28   525.58,315.29 525.58,315.29              525.58,315.29 534.02,308.38 534.02,308.38              534.02,308.38 542.62,302.40 542.62,302.40                542.62,302.40 547.08,301.47  547.08,301.47              547.08,301.47 551.07,298.40 551.07,298.40              551.07,298.40 556.90,294.41 556.90,294.41              556.90,294.41 563.81,289.65 563.81,289.65                563.81,289.65 568.27,285.66  568.27,285.66              568.27,285.66 574.41,277.83 574.41,277.83              574.41,277.83 578.56,269.38 578.56,269.38              578.56,269.38 580.55,263.08 580.55,263.08                580.55,263.08 581.32,256.17  581.32,256.17              581.32,256.17 582.39,240.51 582.39,240.51              582.39,240.51 582.55,215.48 582.55,215.48              582.55,215.48 582.55,192.45 582.55,192.45                582.55,192.45 582.55,176.02  582.55,176.02              582.55,176.02 582.55,158.82 582.55,158.82              582.55,158.82 582.55,143.31 582.55,143.31              582.55,143.31 582.39,127.80 582.39,127.80                582.39,127.80 582.55,109.37  582.55,109.37              582.55,109.37 582.70,87.11 582.70,87.11              582.70,87.11 582.86,68.53 582.86,68.53              582.86,68.53 582.70,52.86 582.70,52.86               582.70,52.86  580.55,37.82  580.55,37.82              580.55,37.82 577.33,30.14 577.33,30.14              577.33,30.14 574.41,25.53 574.41,25.53              574.41,25.53 568.42,18.16 568.42,18.16               568.42,18.16 562.28,13.55   562.28,13.55              562.28,13.55 551.84,7.26 551.84,7.26              551.84,7.26 540.17,3.42 540.17,3.42              540.17,3.42 532.33,1.58 532.33,1.58               532.33,1.58 522.81,0.65  522.81,0.65               522.81,0.65 503.47,0.81 503.47,0.81              503.47,0.81 466.92,0.50 466.92,0.50              466.92,0.50 428.68,0.50 428.68,0.50               428.68,0.50 401.81,0.35  401.81,0.35              401.81,0.35 370.02,0.50  370.02,0.50              370.02,0.50 324.11,0.35 324.11,0.35              324.11,0.35 296.78,0.35 296.78,0.35               296.78,0.35 264.84,0.35  264.84,0.35              264.84,0.35 226.14,0.35 226.14,0.35               226.14,0.35 186.22,0.35 186.22,0.35              186.22,0.35 161.65,0.35 161.65,0.35               161.65,0.35 127.10,0.35  127.10,0.35              127.10,0.35 107.90,0.35 107.90,0.35              107.90,0.35 87.33,0.35  87.33,0.35              87.33,0.35 80.11,1.27 80.11,1.27               80.11,1.27 74.89,2.34  74.89,2.34              74.89,2.34 70.59,3.11 70.59,3.11              70.59,3.11 65.83,4.34 65.83,4.34              65.83,4.34  62.14,5.11 62.14,5.11               62.14,5.11 59.68,6.49  59.68,6.49              59.68,6.49 57.53,8.49 57.53,8.49              57.53,8.49 55.69,11.40 55.69,11.40              55.69,11.40 53.39,13.71 53.39,13.71                53.39,13.71 51.24,15.70  51.24,15.70              51.24,15.70 48.63,19.24 48.63,19.24              48.63,19.24 45.40,23.23 45.40,23.23              45.40,23.23 43.71,26.15 43.71,26.15               43.71,26.15 40.49,29.52   40.49,29.52              40.49,29.52 37.73,31.83 37.73,31.83              37.73,31.83 33.43,34.28 33.43,34.28              33.43,34.28 29.59,36.43 29.59,36.43               29.59,36.43 24.67,38.43  24.67,38.43               24.67,38.43 20.99,40.27 20.99,40.27              20.99,40.27 15.61,44.57 15.61,44.57              15.61,44.57 10.39,48.56 10.39,48.56               10.39,48.56 6.55,53.32  6.55,53.32              6.55,53.32 3.48,59.01 3.48,59.01               3.48,59.01 1.49,63.61 1.49,63.61              1.49,63.61 0.41,68.22 0.41,68.22                0.41,68.22 -0.36,73.90  -0.36,73.90              -0.36,73.90 -0.66,85.26 -0.66,85.26              -0.66,85.26 -0.66,104.15 -0.66,104.15              -0.66,104.15 -0.36,125.34 -0.36,125.34               -0.36,125.34 -0.36,142.08   -0.36,142.08              -0.36,142.08 -0.36,164.81 -0.36,164.81              -0.36,164.81 -0.51,182.16 -0.51,182.16              -0.51,182.16 -0.66,199.51 -0.66,199.51               -0.66,199.51 -0.36,222.70  -0.36,222.70               -0.36,222.70 -0.51,243.43 -0.51,243.43              -0.51,243.43 -0.36,257.86 -0.36,257.86              -0.36,257.86 0.41,266.00 0.41,266.00               0.41,266.00 1.03,277.21  1.03,277.21              1.03,277.21 2.56,285.50  2.56,285.50              2.56,285.50 5.33,294.87 5.33,294.87              5.33,294.87 8.40,300.71 8.40,300.71               8.40,300.71 8.40,300.71  8.40,300.71              8.40,300.71 12.70,306.54 12.70,306.54               12.70,306.54 20.68,314.37 20.68,314.37              20.68,314.37 27.28,318.52 27.28,318.52               27.28,318.52 35.73,322.36  35.73,322.36              35.73,322.36 43.87,324.51 43.87,324.51              43.87,324.51   50.01,325.28 50.32,325.28              50.62,325.28 59.07,326.50 59.07,326.50               59.07,326.50 72.74,326.35  72.74,326.35              72.74,326.35 95.00,326.35 95.00,326.35              95.00,326.35 120.03,326.35  120.03,326.35              120.03,326.35 151.67,326.50 151.67,326.50               151.67,326.50 177.77,326.35  177.77,326.35""";
@@ -29,103 +48,173 @@ M 165.07,119.60            C 169.75,121.84 171.70,127.42 179.96,130.04          
 
     private static final String RELEASE_DATE_BORDER_EXCLUSION_D = "M0,0 h800 v1120 h-800 z M360,1080 h80 v30 h-80 z";
 
-    /**
-     * Builds the complete card using data‑driven mapping for assets & text.
-     */
-    public Group build(CardData cardData) {
-        Group root = new Group();
-        root.setId("karte");
 
-        /* === 22 ImageViews === */
-        addImage(root, "backgroundImage", 800, 1200, cardData);
-        addImage(root, "cardMonsterImage", 586, 586, cardData);
-        addImage(root, "logoImage", 768, 768, cardData);
-        addImage(root, "cardNameBarImage", 585, 137, cardData);
-        addImage(root, "bar05Image", 260, 261, cardData);
-        addImage(root, "bar10Image", 260, 261, cardData);
-        addImage(root, "bar15Image", 260, 261, cardData);
-        addImage(root, "bar20Image", 260, 261, cardData);
-        addImage(root, "bar25Image", 260, 261, cardData);
-        addImage(root, "bar30Image", 260, 261, cardData);
-        addImage(root, "bar35Image", 260, 261, cardData);
-        addImage(root, "bar40Image", 260, 261, cardData);
-        addImage(root, "bar45Image", 260, 261, cardData);
-        addImage(root, "bar50Image", 260, 261, cardData);
-        addImage(root, "bar55Image", 260, 261, cardData);
-        addImage(root, "bar60Image", 260, 261, cardData);
-        addImage(root, "bar65Image", 260, 261, cardData);
-        addImage(root, "bar70Image", 260, 261, cardData);
-        addImage(root, "bar75Image", 260, 261, cardData);
-        addImage(root, "bar80Image", 260, 261, cardData);
-        addImage(root, "bar85Image", 260, 261, cardData);
-        addImage(root, "bar90Image", 260, 261, cardData);
+    private final CardData data;
 
-        /* === Monster clip === */
-        ImageView monster = (ImageView) root.lookup("#cardMonsterImage");
+    public CardView(CardData data) {
+        this.data = Objects.requireNonNull(data);
+
+        setPrefSize(CARD_W, CARD_H);
+        getStyleClass().add("card-root");
+
+        // -- CSS ----------------------------------------------------------
+        var css = FXGL.getAssetLoader().loadCSS("styles/card.css");
+        getStylesheets().add(css.getExternalForm());
+
+        buildLayers();
+        installHoverTween();
+    }
+
+    /* ==================================================================== */
+    /*  Layer Construction                                                  */
+
+    private void buildLayers() {
+        /* 1) Frame / Background PNG (already element‑coloured) */
+        var frame = FXGL.texture(data.imagePath("backgroundImage"));
+        frame.setFitWidth(CARD_W);
+        frame.setFitHeight(CARD_H);
+
+        /* 2) Monster Artwork (clipped) */
+        ImageView art = FXGL.texture(data.imagePath("cardMonsterImage"));
+        art.setPreserveRatio(true);
+        art.setFitWidth(CARD_W * 0.78);
+        art.setFitHeight(CARD_H * 0.40);
+        art.setTranslateY(-CARD_H * 0.05);
         SVGPath clip = new SVGPath();
         clip.setContent(MONSTER_CLIP_D);
-        monster.setClip(clip);
+        art.setClip(clip);
 
-        /* === 20 Text nodes === */
-        addText(root, "cardTitle", 292.5, 68.5, 96, "name", true, null);
-        addText(root, "releaseText", 400, 1099, 28, "release", true, null);
-        addText(root, "statAttack", 110, 20, 32, "statAttack", true, "#e67700");
-        addText(root, "statDefense", 203, 20, 32, "statDefense", true, "#e67700");
-        addText(root, "statSpeed", 296, 20, 32, "statSpeed", true, "#e67700");
-        addText(root, "statMagic", 389, 20, 32, "statMagic", true, "#e67700");
-        addText(root, "statHealth", 482, 20, 32, "statHealth", true, "#e67700");
-        addText(root, "statAttackRed", 110, 20, 32, "statAttackRed", true, "#c92a2a");
-        addText(root, "statDefenseRed", 203, 20, 32, "statDefenseRed", true, "#c92a2a");
-        addText(root, "statSpeedRed", 296, 20, 32, "statSpeedRed", true, "#c92a2a");
-        addText(root, "statMagicRed", 389, 20, 32, "statMagicRed", true, "#c92a2a");
-        addText(root, "statHealthRed", 482, 20, 32, "statHealthRed", true, "#c92a2a");
+        /* 3) Decorative gold border around art */
+        SVGPath border = new SVGPath();
+        border.setContent(MONSTER_BORDER_D);
+        border.setFill(Color.TRANSPARENT);
+        border.setStroke(Color.web("#C89B3C"));
+        border.setStrokeWidth(1.2);
+        border.setScaleX(CARD_W / 260d);   // original SVG was 260×170
+        border.setScaleY(CARD_H / 390d);
+        border.setTranslateY(-CARD_H * 0.05);
 
-        addText(root, "abilityName1", 293.5, 150, 84, "abilityName1", true, "#862e9c", true);
-        addText(root, "abilityEffect1", 293.5, 222, 70, "ability1-desc", true, "#862e9c");
-        addText(root, "abilityValue1", 293.5, 294, 70, "abilityValue1", true, "#862e9c");
+        /* 4) Name bar */
+        Node nameBar = makeNameBar();
 
-        addText(root, "abilityName2", 293.5, 376, 84, "abilityName2", true, "#862e9c", true);
-        addText(root, "abilityEffect2", 293.5, 448, 70, "ability2-desc", true, "#862e9c");
-        addText(root, "abilityValue2", 293.5, 520, 70, "abilityValue2", true, "#862e9c");
+        /* 5) Ability grid (2 × 2) */
+        Node abilityGrid = makeAbilityGrid();
 
-        addText(root, "abilityName3", 293.5, 602, 84, "abilityName3", true, "#862e9c", true);
-        addText(root, "abilityEffect3", 293.5, 674, 70, "ability3-desc", true, "#862e9c");
-        addText(root, "abilityValue3", 293.5, 746, 70, "abilityValue3", true, "#862e9c");
+        /* 6) Stat row at bottom */
+        Node statRow = makeStatRow();
 
-        addText(root, "abilityName4", 293.5, 828, 84, "abilityName4", true, "#862e9c", true);
-        addText(root, "abilityEffect4", 293.5, 900, 70, "ability4-desc", true, "#862e9c");
-        addText(root, "abilityValue4", 293.5, 972, 70, "abilityValue4", true, "#862e9c");
+        /* 7) Logo */
+        var logo = FXGL.texture(data.imagePath("logoImage"));
+        logo.setPreserveRatio(true);
+        logo.setFitWidth(CARD_W * 0.15);
+        logo.setTranslateX(-CARD_W * 0.39);
+        logo.setTranslateY(CARD_H * 0.40);
 
-        return root;
+        getChildren().addAll(frame, art, border, nameBar, abilityGrid, statRow, logo);
     }
 
-    /* === Helper methods === */
-    private void addImage(Group root, String id, int w, int h, CardData data) {
-        ImageView iv = new ImageView(texture(data.imagePath(id)).getImage());
-        iv.setId(id);
-        iv.setFitWidth(w);
-        iv.setFitHeight(h);
-        root.getChildren().add(iv);
+    /* -------------------------------------------------------------------- */
+    /*  Name Bar                                                            */
+
+    private Node makeNameBar() {
+        var bar = FXGL.texture(data.imagePath("cardNameBarImage"));
+        bar.setFitWidth(CARD_W * 0.82);
+        bar.setPreserveRatio(true);
+
+        Text title = new Text(data.title);
+        title.getStyleClass().add("card-title");
+        title.setWrappingWidth(bar.getFitWidth() * 0.9);
+
+        StackPane box = new StackPane(bar, title);
+        box.setTranslateY(-CARD_H * 0.38);
+        return box;
     }
 
-    private void addText(Group root, String id, double x, double y, int size,
-                          String textKey, boolean center, String fill) {
-        addText(root, id, x, y, size, textKey, center, fill, false);
+    /* -------------------------------------------------------------------- */
+    /*  Ability grid                                                        */
+
+    private Node makeAbilityGrid() {
+        GridPane grid = new GridPane();
+        grid.setHgap(4);
+        grid.setVgap(4);
+        grid.setTranslateY(CARD_H * 0.05);
+
+        List<CardData.Ability> list = data.abilities != null ? data.abilities : List.of();
+        String element = data.element == null ? "effect" : data.element.toLowerCase();
+
+        for (int i = 0; i < Math.min(4, list.size()); i++) {
+            var slot = FXGL.texture("bars/card_front_bars_" + element + "01.png");
+            slot.setFitWidth(CARD_W * 0.44);
+            slot.setFitHeight(CARD_H * 0.11);
+
+            Text txt = new Text(list.get(i).name + " (" + list.get(i).value + ")");
+            txt.getStyleClass().add("ability-text");
+
+            StackPane pane = new StackPane(slot, txt);
+            pane.getStyleClass().add("ability-box");
+            int idx = i;
+            pane.setOnMouseClicked(e -> fireAbilityClicked(idx));
+
+            grid.add(pane, i % 2, i / 2); // col,row
+        }
+        grid.setAlignment(Pos.TOP_CENTER);
+        return grid;
     }
 
-    private void addText(Group root, String id, double x, double y, int size,
-                          String textKey, boolean center, String fill, boolean bold) {
-        Text t = new Text(FXGL.localize(textKey));
-        t.setId(id);
-        t.setX(x);
-        t.setY(y);
-        StringBuilder style = new StringBuilder("-fx-font-size:"+size+"px;");
-        if (fill != null) style.append(" -fx-fill:").append(fill).append(';');
-        if (bold)          style.append(" -fx-font-weight:bold;");
-        t.setStyle(style.toString());
-        t.setTextAlignment(center ? TextAlignment.CENTER : TextAlignment.LEFT);
-        root.getChildren().add(t);
+    /* -------------------------------------------------------------------- */
+    /*  Stat row                                                            */
+
+    private Node makeStatRow() {
+        HBox row = new HBox(6);
+        row.setAlignment(Pos.BOTTOM_CENTER);
+        row.setTranslateY(CARD_H * 0.39);
+
+        addStat(row, "icons/atk.png",  data.attack);
+        addStat(row, "icons/magic.png",data.magic);
+        addStat(row, "icons/defred.png",data.magicRed);
+        addStat(row, "icons/dmgred.png",data.dmgRed);
+        addStat(row, "icons/crit.png", data.crit);
+        addStat(row, "icons/speed.png",data.speed);
+        return row;
     }
 
-    private Texture texture(String p) { return FXGL.texture(p); }
+    private void addStat(HBox row, String iconPath, int value) {
+        var icon = FXGL.texture(iconPath);
+        icon.setFitWidth(12);
+        icon.setFitHeight(12);
+        Text val = new Text(String.valueOf(value));
+        val.getStyleClass().add("stat-text");
+        row.getChildren().addAll(icon, val);
+    }
+
+    /* -------------------------------------------------------------------- */
+    /*  Hover animation                                                     */
+
+    private void installHoverTween() {
+        setOnMouseEntered(e -> scaleAnimated(1.2));
+        setOnMouseExited(e -> scaleAnimated(1.0));
+    }
+
+    private void scaleAnimated(double factor) {
+        FXGL.animationBuilder()
+            .duration(Duration.millis(150))
+            .interpolator(Interpolator.EASE_OUT)
+            .scale(this)
+            .to(new javafx.geometry.Point2D(factor, factor))
+            .buildAndPlay();
+    }
+
+    /* -------------------------------------------------------------------- */
+    /*  Ability click event                                                 */
+
+    private void fireAbilityClicked(int idx) {
+        fireEvent(new AbilityClickedEvent(this, idx));
+    }
+
+    public static class AbilityClickedEvent extends javafx.event.Event {
+        public static final EventType<AbilityClickedEvent> TYPE = new EventType<>(javafx.event.Event.ANY, "ABILITY_CLICKED");
+        private final int index;
+        public AbilityClickedEvent(Node src, int index) { super(src, null, TYPE); this.index = index; }
+        public int getIndex() { return index; }
+    }
 }

@@ -1,0 +1,10 @@
+.badge {
+    -fx-background-color: #e03f47;   /* Rot */
+    -fx-background-radius: 9;        /* voll rund */
+    -fx-text-fill: white;            /* Schriftfarbe */
+    -fx-padding: 0 4 0 4;            /* horizontal etwas Platz */
+    -fx-font-size: 10px;             /* kompakt */
+    -fx-min-width: 18;
+    -fx-min-height: 18;
+    -fx-alignment: center;
+}

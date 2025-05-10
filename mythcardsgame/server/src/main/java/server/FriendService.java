@@ -40,6 +40,37 @@ public class FriendService {
     }
 
     // existing methods ...
+    
+    public boolean areFriends(UUID user1, UUID user2) {
+        // gleiche IDs?  (optional – kann man rauswerfen)
+        if (user1.equals(user2)) {
+            return false;        // man ist nicht „mit sich selbst“ befreundet
+        }
+
+        String sql = """
+            SELECT 1
+              FROM friends
+             WHERE (user1_id = ? AND user2_id = ?)
+                OR (user1_id = ? AND user2_id = ?)
+             LIMIT 1
+            """;
+
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, user1.toString());
+            stmt.setString(2, user2.toString());
+            stmt.setString(3, user2.toString());
+            stmt.setString(4, user1.toString());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();   // true, wenn mindestens eine Zeile existiert
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();    // in Prod besser mit Logger
+            return false;           // defensive Fallback
+        }
+    }
 
     public boolean sendFriendRequest(UUID senderId, UUID receiverId) {
         String sql = "INSERT INTO friend_requests (id, sender_id, receiver_id, created_at, expires_at, status) VALUES (?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PENDING')";
