@@ -1,8 +1,11 @@
 package common;
 
+import java.time.Instant;
+import java.util.UUID;
+
 public record PendingRequestDTO(
-	    String requestId,
-	    String senderId,
-	    String senderUsername,
-	    String expiresAt
-	) {}
+        UUID requestId,
+        UUID senderId,
+        String senderUsername,
+        Instant expiresAt
+) {}

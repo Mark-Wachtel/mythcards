@@ -21,6 +21,8 @@ public class FriendCell extends ListCell<FriendDTO> {
     private final Label badge = new Label();
     private final Circle dot  = new Circle(5);
 
+    private final HBox box;
+
     public FriendCell(ObservableMap<UUID,Integer> unread,
                       ObservableSet<UUID> online) {
         this.unread = unread;
@@ -31,10 +33,14 @@ public class FriendCell extends ListCell<FriendDTO> {
         badge.setAlignment(Pos.CENTER);
         badge.setVisible(false);
 
-        HBox box = new HBox(8, dot, name, badge);
+        name.setTextFill(Color.WHITE);
+        name.setMinWidth(Region.USE_PREF_SIZE);
+        HBox.setHgrow(name, Priority.ALWAYS);
+
+        box = new HBox(8, dot, name, badge);
         box.setAlignment(Pos.CENTER_LEFT);
+
         setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        setGraphic(box);
     }
 
     @Override
@@ -44,6 +50,8 @@ public class FriendCell extends ListCell<FriendDTO> {
             setGraphic(null);
             return;
         }
+
+        System.out.println("username is: " + fr.username() + " updateItem aufgerufen!");
         name.setText(fr.username());
 
         /* Präsenz-Binding (userId) */
@@ -68,6 +76,7 @@ public class FriendCell extends ListCell<FriendDTO> {
                 unread
             )
         );
-        setGraphic(getGraphic());
+
+        setGraphic(box);
     }
 }

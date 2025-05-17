@@ -3,6 +3,7 @@ package server;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -17,7 +18,7 @@ public class CardService {
 
     public CardService(CardRepository r) { this.repo = r; }
 
-    public Optional<CardDTO> getCard(long id) {
+    public Optional<CardDTO> getCard(UUID id) {
         return repo.findWithAbilities(id).map(this::map);
     }
 

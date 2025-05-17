@@ -1,5 +1,7 @@
 package server;
 
+import java.util.UUID;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,7 +15,7 @@ public class CardController {
     public CardController(CardService svc) { this.service = svc; }
 
     @GetMapping("/card/{id}")
-    public ResponseEntity<CardDTO> card(@PathVariable long id) {
+    public ResponseEntity<CardDTO> card(@PathVariable UUID id) {
         return service.getCard(id)
                       .map(ResponseEntity::ok)
                       .orElse(ResponseEntity.notFound().build());

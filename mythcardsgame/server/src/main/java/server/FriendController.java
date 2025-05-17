@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import common.FriendDTO;
 import common.PendingRequestDTO;
 
 import java.util.List;
@@ -20,8 +21,8 @@ public class FriendController {
      * Get the list of friend usernames for a given user.
      */
     @GetMapping("/list")
-    public ResponseEntity<List<String>> listFriends(@RequestParam UUID userId) {
-        List<String> friends = friendService.getFriendUsernames(userId);
+    public ResponseEntity<List<FriendDTO>> listFriends(@RequestParam UUID userId) {
+        List<FriendDTO> friends = friendService.getFriendUsernames(userId);
         return ResponseEntity.ok(friends);
     }
 

@@ -10,6 +10,13 @@ spring:
       ddl-auto: validate
     open-in-view: false
 
+    # ► SQL-Ausgabe aktivieren
+    show-sql: true                       # rohes SQL ausgeben
+    properties:
+      hibernate.format_sql: true         # schön formatiert
+      hibernate.highlight_sql: true      # ANSI-Farben in der Konsole (optional)
+      # hibernate.generate_statistics: true   # ⬅︎ aktiviert Performance-Statistiken (Debug-Purpose)
+
   security:
     oauth2:
       resourceserver:
@@ -25,4 +32,13 @@ server:
 
 logging:
   level:
-    org.springframework.security: DEBUG
+    org.springframework.security: DEBUG  # deine bisherige Einstellung
+
+    # ► Hibernate 6 – SQL und Bind-Parameter
+    org.hibernate.SQL: DEBUG             # ausgeführte SQL-Statements
+    org.hibernate.orm.jdbc.bind: TRACE   # Werte, die an '?' gebunden werden
+    org.hibernate.orm.jdbc.extract: TRACE # ResultSet-Auslesen (bei Bedarf)
+
+    # Falls noch Hibernate-5-Artefakte oder Libraries im Projekt wären,
+    # kannst du zur Sicherheit die alten Kategorien zusätzlich freischalten:
+    # org.hibernate.type.descriptor.sql.BasicBinder: TRACE

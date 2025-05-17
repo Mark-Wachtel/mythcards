@@ -1,348 +1,501 @@
 package client;
 
+
+import com.almasb.fxgl.app.GameApplication;
+import com.almasb.fxgl.app.GameSettings;
+import com.almasb.fxgl.app.scene.FXGLScene;
+import com.almasb.fxgl.app.scene.IntroScene;
+import com.almasb.fxgl.app.scene.SceneFactory;
+import com.almasb.fxgl.app.scene.StartupScene;
+import com.almasb.fxgl.dsl.FXGL;
+import common.*;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.*;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.prefs.Preferences;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
-import com.almasb.fxgl.app.GameApplication;
-import com.almasb.fxgl.app.GameSettings;
-import com.almasb.fxgl.dsl.FXGL;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.Group;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseButton;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.scene.shape.SVGPath;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
-import javafx.stage.Stage;
-import common.PendingRequestDTO;
-import common.AuthResponse;
-import common.LoginRequest;
-import common.RegisterRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import common.CardData;
-
 public class ClientMain extends GameApplication {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Preferences prefs = Preferences.userNodeForPackage(ClientMain.class);
     private final FriendServiceClient friendClient = new FriendServiceClient();
 
-    private String accessToken;
+    private static String accessToken;
     private UUID currentUserId;
-    private boolean loggedIn;
     private String currentUsername;
+    private boolean loggedIn;
 
-    private ListView<String> combinedListView;
+    private ChatSocket chatSocket;
+    private ListView<FriendDTO> combinedListView;
+
+    private BorderPane root;
 
     @Override
     protected void initSettings(GameSettings settings) {
-        settings.setTitle("Myth Cards Client");
+        settings.setTitle("Myth Cards Client 0.0");
         settings.setWidth(1280);
         settings.setHeight(720);
-        settings.getCSSList().add("chat.css"); 
+        settings.getCSSList().add("styles/chat.css");
+        settings.setMainMenuEnabled(false);
+        settings.setIntroEnabled(true);
+
+        settings.setSceneFactory(new SceneFactory() {
+            @Override
+            public StartupScene newStartup(int width, int height) {
+                return new CustomStartupScene(width, height);
+            }
+            
+            @Override
+            public IntroScene newIntro() {
+                return new MyIntroScene();
+            }
+        });  
+    }
+    
+    public class MyIntroScene extends IntroScene {
+        public MyIntroScene() {
+            super();
+
+            // Hintergrundbild über FXGL laden
+            var bg = FXGL.texture("bg/loading_screen.png");
+            bg.setFitWidth(FXGL.getSettings().getWidth());
+            bg.setFitHeight(FXGL.getSettings().getHeight());
+
+            getContentRoot().getChildren().add(bg);
+
+            // Optional: Loading-Text, Animation, etc.
+            // Text loading = new Text("Loading ...");
+            // loading.setFill(Color.WHITE);
+            // loading.setFont(Font.font(30));
+            // getContentRoot().getChildren().add(loading);
+        }
+
+		@Override
+		public void startIntro() {
+			// TODO Auto-generated method stub
+			finishIntro();
+		}
+    }
+    
+    public static class CustomStartupScene extends StartupScene {
+
+        public CustomStartupScene(int appWidth, int appHeight) {
+            super(appWidth, appHeight);
+
+            // Nutze hier kein FXGL.texture(...) – FXGL ist noch nicht initialisiert!
+            javafx.scene.image.Image bgImage = new javafx.scene.image.Image(
+                getClass().getResource("/assets/textures/bg/loading_screen.png").toExternalForm()
+            );
+
+            javafx.scene.image.ImageView bgView = new javafx.scene.image.ImageView(bgImage);
+            bgView.setFitWidth(appWidth);
+            bgView.setFitHeight(appHeight);
+
+            getContentRoot().getChildren().add(bgView);
+        }
     }
 
     @Override
     protected void initGame() {
-    	  
         String savedUser = prefs.get("username", null);
         String savedPass = prefs.get("password", null);
         if (savedUser != null && savedPass != null) {
-            tryLogin(savedUser, savedPass, null, true, true);
+            tryLogin(savedUser, savedPass, new Text(), true);
         } else {
             showLoginScene();
         }
     }
 
     private void showLoginScene() {
-        TextField usernameField = new TextField();
-        usernameField.setPromptText("Username");
-        PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Password");
+        TextField userField = new TextField();
+        userField.setPromptText("Username");
+
+        PasswordField passField = new PasswordField();
+        passField.setPromptText("Password");
+
         CheckBox rememberCb = new CheckBox("Remember me");
-        Button loginButton = new Button("Login");
-        Button registerButton = new Button("Register");
+
+        Button loginBtn = new Button("Login");
+        Button registerBtn = new Button("Register");
+
         Text statusText = new Text();
 
-        loginButton.setOnAction(e -> tryLogin(usernameField.getText(), passwordField.getText(), statusText, false, rememberCb.isSelected()));
-        registerButton.setOnAction(e -> tryRegister(usernameField.getText(), passwordField.getText(), statusText, rememberCb.isSelected()));
+        loginBtn.setOnAction(e -> tryLogin(userField.getText(), passField.getText(), statusText, rememberCb.isSelected()));
+        registerBtn.setOnAction(e -> tryRegister(userField.getText(), passField.getText(), statusText, rememberCb.isSelected()));
 
-        VBox vbox = new VBox(10, usernameField, passwordField, rememberCb, loginButton, registerButton, statusText);
-        vbox.setTranslateX(400);
-        vbox.setTranslateY(200);
+        VBox box = new VBox(10, userField, passField, rememberCb, loginBtn, registerBtn, statusText);
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(20));
+
+        // ⚡ FXGL-Texture verwenden (bereits initialisiert)
+        var bgView = FXGL.texture("bg/loading_screen.png");
+        bgView.setFitWidth(1280);
+        bgView.setFitHeight(720);
+
+        StackPane root = new StackPane(bgView, box);
+        root.setPrefSize(1280, 720);
 
         FXGL.getGameScene().clearUINodes();
-        FXGL.addUINode(vbox);
+        FXGL.addUINode(root);
     }
 
-    private void tryLogin(String username, String password, Text statusText, boolean isAuto, boolean remember) {
+    private void tryLogin(String username, String password, Text statusText, boolean remember) {
         try {
-            String body = new ObjectMapper().writeValueAsString(new LoginRequest(username, password));
-            HttpRequest request = HttpRequest.newBuilder()
+            String body = MAPPER.writeValueAsString(new LoginRequest(username, password));
+            HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create("http://localhost:8080/auth/login"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();
 
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenAccept(response -> FXGL.runOnce(() -> {
-                        if (response.statusCode() == 200) {
-                            try {
-                                AuthResponse auth = new ObjectMapper().readValue(response.body(), AuthResponse.class);
-                                accessToken = auth.accessToken();
-                                AuthTokenStore.getInstance().setAccessToken(accessToken);
-                                currentUserId = UUID.fromString(auth.userId());
-                                currentUsername = username;
-                                friendClient.setAccessToken(accessToken);
-                                loggedIn = true;
-                                if (!isAuto && remember) {
-                                    prefs.put("username", username);
-                                    prefs.put("password", password);
-                                }
-                                showMainMenuScene();
-                            } catch (Exception ex) {
-                                statusText.setText("Error processing response");
-                            }
+            httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(resp -> Platform.runLater(() -> {
+                        if (resp.statusCode() == 200) {
+                            handleLoginSuccess(resp.body(), remember);
                         } else {
-                            statusText.setText("Login failed: " + response.statusCode());
+                            statusText.setText("Login fehlgeschlagen: " + resp.statusCode());
                         }
-                    }, javafx.util.Duration.ZERO));
+                    }))
+                    .exceptionally(ex -> {
+                        Platform.runLater(() -> statusText.setText("Fehler beim Senden der Anfrage"));
+                        return null;
+                    });
         } catch (Exception ex) {
-            statusText.setText("Error sending request");
+            Platform.runLater(() -> statusText.setText("Fehler beim Erstellen der Anfrage"));
+        }
+    }
+
+    private void handleLoginSuccess(String jsonBody, boolean remember) {
+        try {
+            AuthResponse auth = MAPPER.readValue(jsonBody, AuthResponse.class);
+            accessToken = auth.accessToken();
+            currentUserId = UUID.fromString(auth.userId());
+            loggedIn = true;
+
+            friendClient.setAccessToken(accessToken);
+            chatSocket = new ChatSocket(new URI("ws://localhost:8080/ws"), accessToken);
+
+            showMainMenuScene();
+
+            CompletableFuture.runAsync(() -> {
+                try {
+                    chatSocket.connect();
+                    System.out.println("Connected with chatSocket: " + chatSocket.toString());
+                } catch (Exception e) {
+                    Platform.runLater(() -> showAlert("WebSocket-Fehler", e.getMessage()));
+                }
+            });
+
+            if (remember) {
+                prefs.put("username", currentUsername);
+                prefs.put("password", ""); // Achtung: im echten Projekt verschlüsseln
+            }
+        } catch (Exception e) {
+            showAlert("Verarbeitungsfehler", "Antwort konnte nicht gelesen werden");
         }
     }
 
     private void tryRegister(String username, String password, Text statusText, boolean remember) {
         try {
-            String body = new ObjectMapper().writeValueAsString(new RegisterRequest(username, password));
-            HttpRequest request = HttpRequest.newBuilder()
+            String body = MAPPER.writeValueAsString(new RegisterRequest(username, password));
+            HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create("http://localhost:8080/auth/register"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();
 
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenAccept(response -> FXGL.runOnce(() -> {
-                        if (response.statusCode() == 200) {
-                            try {
-                                AuthResponse auth = new ObjectMapper().readValue(response.body(), AuthResponse.class);
-                                accessToken = auth.accessToken();
-                                AuthTokenStore.getInstance().setAccessToken(accessToken);
-                                currentUserId = UUID.fromString(auth.userId());
-                                currentUsername = username;
-                                friendClient.setAccessToken(accessToken);
-                                loggedIn = true;
-                                if (remember) {
-                                    prefs.put("username", username);
-                                    prefs.put("password", password);
-                                }
-                                showMainMenuScene();
-                            } catch (Exception ex) {
-                                statusText.setText("Error processing response");
-                            }
+            httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(resp -> Platform.runLater(() -> {
+                        if (resp.statusCode() == 200) {
+                            tryLogin(username, password, statusText, remember);
                         } else {
-                            statusText.setText("Register failed: " + response.statusCode());
+                            statusText.setText("Registrierung fehlgeschlagen: " + resp.statusCode());
                         }
-                    }, javafx.util.Duration.ZERO));
+                    }))
+                    .exceptionally(ex -> {
+                        Platform.runLater(() -> statusText.setText("Fehler beim Senden der Anfrage"));
+                        return null;
+                    });
         } catch (Exception ex) {
-            statusText.setText("Error sending request");
+            Platform.runLater(() -> statusText.setText("Fehler beim Erstellen der Anfrage"));
         }
     }
 
     private void showMainMenuScene() {
-        BorderPane root = new BorderPane();
-        HBox topBar = new HBox(20);
-        Button logoutBtn = new Button("Logout");
-        Button settingsBtn = new Button("Settings");
-        settingsBtn.setOnAction(e -> showSettingsScene());
-        Button cardTestBtn = new Button("Card Test");
-        cardTestBtn.setOnAction(e -> showCardTest());
+        root = new BorderPane();
 
-        logoutBtn.setOnAction(e -> {
-            loggedIn = false;
-            accessToken = null;
-            currentUserId = null;
-            friendClient.setAccessToken(null);
-            prefs.remove("username");
-            prefs.remove("password");
-            showLoginScene();
-        });
-        topBar.getChildren().addAll(new Button("Profile"), new Button("Match History"), cardTestBtn, settingsBtn, logoutBtn);
+        // Top Navigation
+        Button btnHome = new Button("Startseite");
+        Button btnProfile = new Button("Profil");
+        Button btnDecks = new Button("Decks");
+        Button btnPlay = new Button("Spielen");
+        Button btnSettings = new Button("Einstellungen");
+        Button logoutBtn = new Button("Logout");
+
+        logoutBtn.setOnAction(e -> logout());
+        btnHome.setOnAction(e -> root.setCenter(new StackPane(new Label("Willkommen im Hauptmenü!"))));
+        btnProfile.setOnAction(e -> root.setCenter(createProfileView()));
+
+        HBox topBar = new HBox(10, btnHome, btnProfile, btnDecks, btnPlay, btnSettings, logoutBtn);
         topBar.setPadding(new Insets(10));
-        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setAlignment(Pos.CENTER);
         root.setTop(topBar);
 
-        combinedListView = new ListView<>();
-        combinedListView.setPrefHeight(500);
+        // Standardansicht
+        root.setCenter(new StackPane(new Label("Willkommen im Hauptmenü!")));
 
-        VBox centerBox = new VBox(10, combinedListView);
-        centerBox.setPadding(new Insets(10));
-        root.setCenter(centerBox);
-
-        FXGL.getGameScene().clearUINodes();
-        FXGL.addUINode(root);
-
-        fetchAndDisplay();
-    }
-
-    private void showCardTest() {
-        // 1) Testkarte holen
-        CardData card = CardDataFetcher.fetchCardData(1);
-        if (card == null) {
-            FXGL.getDialogService().showMessageBox("Fehler beim Laden der Testkarte!");
-            return;
-        }
-
-        // 2) Texte registrieren
-        CardLocalization.register(card);
-
-        // 3) Ansicht erzeugen
-        Node cardNode = new CardView(card);
-
-        // 4) Szene aufräumen und Karte anzeigen
-        FXGL.getGameScene().clearUINodes();
-        FXGL.addUINode(cardNode);
-    }
-
-    private void showSettingsScene() {
-        BorderPane root = new BorderPane(); 
-        Text title = new Text("Settings");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-
-        Button audioSettingsBtn = new Button("Audio Settings");
-        audioSettingsBtn.setOnAction(e -> showAudioSettings());
-
-        Button graphicsSettingsBtn = new Button("Graphics Settings (coming soon)");
-        graphicsSettingsBtn.setDisable(true);
-        Button controlsSettingsBtn = new Button("Controls Settings (coming soon)");
-        controlsSettingsBtn.setDisable(true);
-
-        Button backBtn = new Button("Back");
-        backBtn.setOnAction(e -> showMainMenuScene());
-
-        VBox menu = new VBox(15, title, audioSettingsBtn, graphicsSettingsBtn, controlsSettingsBtn, backBtn);
-        menu.setPadding(new Insets(20));
-        menu.setAlignment(Pos.TOP_CENTER);
-
-        root.setCenter(menu);
+        // Freundesliste rechts immer sichtbar
+        root.setRight(createFriendsView());
 
         FXGL.getGameScene().clearUINodes();
         FXGL.addUINode(root);
+
+        friendClient.fetchFriends(currentUserId)
+                .thenAccept(list -> Platform.runLater(() -> chatSocket.getFriendObservableList().setAll(list)));
     }
 
-    private void showAudioSettings() {
-        BorderPane root = new BorderPane();
-        Text title = new Text("Audio Settings");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        Slider gameVolume = new Slider(0, 100, 70);
-        Slider musicVolume = new Slider(0, 100, 50);
-        Slider discordVolume = new Slider(0, 100, 80);
-        gameVolume.setShowTickLabels(true);
-        musicVolume.setShowTickLabels(true);
-        discordVolume.setShowTickLabels(true);
-        gameVolume.setMajorTickUnit(25);
-        musicVolume.setMajorTickUnit(25);
-        discordVolume.setMajorTickUnit(25);
+    private Node createFriendsView() {
+        VBox wrapper = new VBox(10);
 
-        VBox sliders = new VBox(15,
-            new VBox(new Text("Game Volume"), gameVolume),
-            new VBox(new Text("Custom Music Volume"), musicVolume),
-            new VBox(new Text("Discord Voice Volume"), discordVolume)
-        );
+        Button addFriendBtn = new Button("+ Freund hinzufügen");
+        addFriendBtn.setMaxWidth(Double.MAX_VALUE);
+        addFriendBtn.setOnAction(e -> showAddFriendDialog());
 
-        Button loadMusicBtn = new Button("Load Your Music");
-        loadMusicBtn.setOnAction(e -> {
-            FXGL.getDialogService().showMessageBox("TODO: FilePicker für MP3s öffnen und Playlist verwalten");
+        wrapper.getChildren().add(addFriendBtn);
+
+        // PENDING REQUESTS anzeigen
+        friendClient.fetchPendingRequests(currentUserId, accessToken)
+                .thenAccept(requests -> Platform.runLater(() -> {
+                	System.out.println("Empfangene Freundschaftsanfragen: " + requests.size());
+                    for (PendingRequestDTO req : requests) {
+                        Label nameLabel = new Label(req.senderUsername());
+                        Button acceptBtn = new Button("Annehmen");
+                        Button declineBtn = new Button("Ablehnen");
+
+                        acceptBtn.setOnAction(a -> {
+                            friendClient.acceptFriendRequest(req.requestId())
+                                    .thenAccept(success -> {
+                                        if (success) {
+                                        	reloadFriendUI();
+                                            Platform.runLater(() -> showAlert("Angenommen", req.senderUsername() + " wurde hinzugefügt."));
+                                        }
+                                    });
+                        });
+
+                        declineBtn.setOnAction(d -> {
+                            friendClient.declineFriendRequest(req.requestId())
+                                    .thenAccept(success -> {
+                                        if (success) {
+                                        	reloadFriendUI();
+                                            Platform.runLater(() -> showAlert("Abgelehnt", req.senderUsername() + " wurde abgelehnt."));
+                                        }
+                                    });
+                        });
+
+                        HBox requestBox = new HBox(5, nameLabel, acceptBtn, declineBtn);
+                        requestBox.setAlignment(Pos.CENTER_LEFT);
+                        wrapper.getChildren().add(requestBox);
+                    }
+                }));
+
+        combinedListView = new ListView<>(chatSocket.getFriendObservableList());
+        combinedListView.setCellFactory(list -> new FriendCell(chatSocket.getUnreadMap(), chatSocket.getOnlineSet()));
+        combinedListView.setOnMouseClicked(evt -> {
+            if (evt.getButton() == MouseButton.PRIMARY && evt.getClickCount() == 1) {
+                FriendDTO sel = combinedListView.getSelectionModel().getSelectedItem();
+                if (sel != null) openChat(sel);
+            }
         });
 
-        Button backBtn = new Button("Back to Settings");
-        backBtn.setOnAction(e -> showSettingsScene());
-
-        VBox content = new VBox(20, title, sliders, loadMusicBtn, backBtn);
-        content.setPadding(new Insets(20));
-        content.setAlignment(Pos.TOP_CENTER);
-
-        root.setCenter(content);
-
-        FXGL.getGameScene().clearUINodes();
-        FXGL.addUINode(root);
+        VBox.setVgrow(combinedListView, Priority.ALWAYS);
+        wrapper.getChildren().add(combinedListView);
+        wrapper.setPadding(new Insets(10));
+        wrapper.setPrefWidth(250);
+        return wrapper;
     }
 
-    private void fetchAndDisplay() {
-        if (!loggedIn || currentUserId == null || accessToken == null) return;
-        CompletableFuture<List<PendingRequestDTO>> reqFut = friendClient.fetchPendingRequests(currentUserId);
-        CompletableFuture<List<String>> friFut = friendClient.fetchFriends(currentUserId);
-        reqFut.thenCombine(friFut, (reqs, friends) -> {
-            FXGL.runOnce(() -> {
-                List<String> combined = new ArrayList<>();
-                DateTimeFormatter dbFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
-                for (PendingRequestDTO r : reqs) {
-                    String exp = "";
-                    if (r.expiresAt() != null && !r.expiresAt().isBlank()) {
+    private void reloadFriendUI() {
+        // Liste neuladen + UI neu setzen
+        friendClient.fetchFriends(currentUserId)
+            .thenAccept(list -> Platform.runLater(() -> {
+                chatSocket.getFriendObservableList().setAll(list);
+                root.setRight(createFriendsView());
+            }));
+    }
+
+    private void showAddFriendDialog() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Freund hinzufügen");
+        dialog.setHeaderText("UUID eingeben:");
+        dialog.setContentText("UUID:");
+        dialog.showAndWait().ifPresent(uuidString -> {
+            try {
+                UUID receiverId = UUID.fromString(uuidString.trim());
+                friendClient.sendFriendRequest(currentUserId, receiverId)
+                    .thenAccept(success -> Platform.runLater(() -> {
+                        if (success) showAlert("Erfolg", "Anfrage gesendet!");
+                        else showAlert("Fehler", "Anfrage fehlgeschlagen.");
+                    }));
+            } catch (IllegalArgumentException ex) {
+                showAlert("Fehler", "Ungültige UUID eingegeben!");
+            }
+        });
+    }
+
+
+    private void openChat(FriendDTO friend) {
+        ensureConversation(friend.userId(), friend.conversationId())
+                .thenAccept(convId -> Platform.runLater(() -> {
+                    ChatWindow pane = new ChatWindow(convId, chatSocket);
+                    Stage stage = new Stage();
+                    stage.setTitle("Chat mit " + friend.username());
+                    stage.setScene(new Scene(pane, 400, 600));
+
+                    chatSocket.subscribeToConversation(convId, pane::addMessage);
+                    loadHistory(convId, pane);
+
+                    HBox inputBar = createInputBar(convId, pane);
+                    pane.setBottom(inputBar);
+                    stage.show();
+                }))
+                .exceptionally(ex -> {
+                    Platform.runLater(() -> showAlert("Fehler", ex.getMessage()));
+                    return null;
+                });
+    }
+
+    private void loadHistory(UUID convId, ChatWindow pane) {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:8080/api/chat/history?convId=" + convId))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .build();
+        httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(resp -> {
+                    if (resp.statusCode() == 200) {
                         try {
-                            LocalDateTime ldt = LocalDateTime.parse(r.expiresAt(), dbFmt);
-                            exp = " (exp: " + fmt.format(ldt.atZone(ZoneId.systemDefault()).toInstant()) + ")";
-                        } catch (DateTimeParseException ex) {
-                            exp = " (exp: " + r.expiresAt() + ")";
+                            List<ChatMessageDTO> msgs = MAPPER.readValue(resp.body(), new com.fasterxml.jackson.core.type.TypeReference<>(){});
+                            Platform.runLater(() -> msgs.forEach(pane::addMessage));
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
                     }
-                    combined.add("[Request] " + r.senderUsername() + exp);
-                }
-                friends.sort(String::compareToIgnoreCase);
-                combined.addAll(friends);
-                combinedListView.getItems().setAll(combined);
-            }, javafx.util.Duration.ZERO);
-            return null;
-        }).exceptionally(ex -> { ex.printStackTrace(); return null; });
+                });
     }
 
-    private void promptAddFriend() {
-        TextInputDialog dlg = new TextInputDialog();
-        dlg.setTitle("Add Friend");
-        dlg.setHeaderText("Enter friend's username:");
-        dlg.showAndWait().ifPresent(username -> {
-            friendClient.fetchUserIdByUsername(username)
-                .thenCompose(targetId -> {
-                    if (targetId == null || targetId.equals(currentUserId))
-                        return CompletableFuture.completedFuture(false);
-                    return friendClient.fetchFriends(currentUserId)
-                        .thenCompose(f -> f.contains(username)
-                            ? CompletableFuture.completedFuture(false)
-                            : friendClient.sendFriendRequest(currentUserId, targetId)
-                        );
-                })
-                .whenComplete((ok, err) -> FXGL.runOnce(() -> {
-                    if (err != null) FXGL.getDialogService().showErrorBox(err.getMessage(), null);
-                    else if (!ok) FXGL.getDialogService().showMessageBox("Could not send request to " + username);
-                    else FXGL.getDialogService().showMessageBox("Friend request sent to " + username);
-                    fetchAndDisplay();
-                }, javafx.util.Duration.ZERO));
+    private CompletableFuture<UUID> ensureConversation(UUID friendId, UUID convId) {
+        if (convId != null) return CompletableFuture.completedFuture(convId);
+        CreateConversationDTO dto = new CreateConversationDTO(false, null, List.of(currentUserId, friendId));
+        try {
+            String payload = MAPPER.writeValueAsString(dto);
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:8080/api/conversations"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build();
+            return httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(resp -> {
+                        if (resp.statusCode() != 200)
+                            throw new RuntimeException("Erstellung fehlgeschlagen: " + resp.statusCode());
+                        try {
+                            GroupCreatedDTO created = MAPPER.readValue(resp.body(), GroupCreatedDTO.class);
+                            return created.conversationId();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        } catch (Exception e) {
+            CompletableFuture<UUID> failed = new CompletableFuture<>();
+            failed.completeExceptionally(e);
+            return failed;
+        }
+    }
+    
+    private Node createProfileView() {
+        VBox box = new VBox(10);
+        box.setPadding(new Insets(20));
+
+        Label headline = new Label("Dein Profil");
+        Label nameLabel = new Label("Benutzername: " + currentUsername);
+        Label idLabel = new Label("Deine UUID:");
+        TextField uuidField = new TextField(currentUserId.toString());
+        uuidField.setEditable(false);
+        uuidField.setPrefWidth(300);
+
+        Button copyBtn = new Button("Kopieren");
+        copyBtn.setOnAction(e -> {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(uuidField.getText());
+            Clipboard.getSystemClipboard().setContent(content);
+            showAlert("Kopiert", "UUID wurde in die Zwischenablage kopiert.");
         });
+
+        HBox uuidBox = new HBox(5, uuidField, copyBtn);
+        box.getChildren().addAll(headline, nameLabel, idLabel, uuidBox);
+        return box;
     }
 
-    private void openChat(String user) {
-        // TODO: chat logic
+
+    private HBox createInputBar(UUID convId, ChatWindow pane) {
+        TextField input = new TextField();
+        input.setPromptText("Nachricht eingeben...");
+        Button sendBtn = new Button("Send");
+        sendBtn.setOnAction(e -> {
+            String text = input.getText();
+            if (!text.isBlank()) {
+                ChatMessageDTO dto = new ChatMessageDTO(convId, UUID.randomUUID(), currentUserId, Instant.now(), text, false);
+                chatSocket.send("/app/chat.send", dto);
+                input.clear();
+            }
+        });
+        HBox box = new HBox(5, input, sendBtn);
+        box.setPadding(new Insets(5));
+        return box;
+    }
+
+    private void logout() {
+        loggedIn = false;
+        accessToken = null;
+        currentUserId = null;
+        friendClient.setAccessToken(null);
+        prefs.remove("username");
+        prefs.remove("password");
+        showLoginScene();
+    }
+
+    private void showAlert(String title, String message) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION, message, ButtonType.OK);
+        a.setHeaderText(title);
+        a.showAndWait();
+    }
+    
+    public static String getAccessToken()
+    {
+			return accessToken;
     }
 
     public static void main(String[] args) {

@@ -1,0 +1,42 @@
+.root {
+    -fx-base: #121212;
+    -fx-background: #121212;
+    -fx-control-inner-background: #1e1e1e;
+    -fx-text-fill: #ffffff;
+
+    /* primary accent colour */
+    -fx-accent: #bb86fc;
+    -fx-focus-color: #bb86fc;
+    -fx-faint-focus-color: #bb86fc22;
+}
+
+/* Buttons */
+.button {
+    -fx-background-color: #1f1f1f;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 8px;
+    -fx-padding: 8 16 8 16;
+}
+.button:hover {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Lists, tables, text fields */
+.table-view,
+.list-view,
+.text-input,
+.text-area {
+    -fx-background-color: #1e1e1e;
+    -fx-control-inner-background: #1e1e1e;
+    -fx-text-fill: #ffffff;
+}
+
+/* Progress bars */
+.progress-bar > .bar {
+    -fx-background-color: #bb86fc;
+}
+
+/* Scroll-bars */
+.scroll-bar > .thumb {
+    -fx-background-color: #2d2d2d;
+}
