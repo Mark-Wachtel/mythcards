@@ -1,44 +1,89 @@
+###############################################################################
+#  APPLICATION.YML – zentrale Konfiguration                                   #
+#  Ablage: src/main/resources/application.yml                                  #
+###############################################################################
+
 spring:
+
+  # ---------------------------------------------------------------------------
+  # Datenquelle (MySQL)
+  # ---------------------------------------------------------------------------
   datasource:
     url: jdbc:mysql://localhost:3306/myth_cards
     username: root
-    password: Le@gueOfLegendz2018!
+    password: Le@gueOfLegendz2018!     # via Env-Var überschreibbar
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  # ---------------------------------------------------------------------------
+  # JPA / Hibernate
+  # ---------------------------------------------------------------------------
   jpa:
     hibernate:
-      ddl-auto: validate
-    open-in-view: false
-
-    # ► SQL-Ausgabe aktivieren
-    show-sql: true                       # rohes SQL ausgeben
+      ddl-auto: validate                      # nix automatisch ändern
+    open-in-view: false                       # kein Lazy-Loading im View-Layer
+    show-sql: true                            # rohes SQL loggen
     properties:
-      hibernate.format_sql: true         # schön formatiert
-      hibernate.highlight_sql: true      # ANSI-Farben in der Konsole (optional)
-      # hibernate.generate_statistics: true   # ⬅︎ aktiviert Performance-Statistiken (Debug-Purpose)
+      hibernate.format_sql: true              # hübsch formatiert
+      hibernate.highlight_sql: true           # ANSI-Farben
+      # hibernate.generate_statistics: true   # (optional) Query-Stats
 
+  # ---------------------------------------------------------------------------
+  # Security / JWT
+  # ---------------------------------------------------------------------------
   security:
     oauth2:
       resourceserver:
         jwt:
-          secret: ${jwt.secret}
+          secret: JWT_SECRET:superSecret_1234567890
 
+# Globale JWT-Optionen (non-spring, eigenes Prefex)
 jwt:
-  secret: deinSuperSichererGeheimerSchlüssel1234567890
-  exp: PT1H
+  secret: JWT_SECRET:superSecret_1234567890
+  exp: PT1H                                   # ISO-8601-Duration (1 h)
 
+# ---------------------------------------------------------------------------
+# WebSocket / STOMP → RabbitMQ (STOMP-Relay)
+# ---------------------------------------------------------------------------
+stomp:
+  relay:
+    host: STOMP_HOST:localhost
+    port: STOMP_PORT:61613                # STOMP-Port von RabbitMQ
+    login: STOMP_LOGIN:guest
+    passcode: STOMP_PASSCODE:guest
+
+# ---------------------------------------------------------------------------
+# Server-Port (falls du nicht 8080 willst)
+# ---------------------------------------------------------------------------
 server:
   port: 8080
 
+# ---------------------------------------------------------------------------
+# LOGGING
+# ---------------------------------------------------------------------------
 logging:
   level:
-    org.springframework.security: DEBUG  # deine bisherige Einstellung
 
-    # ► Hibernate 6 – SQL und Bind-Parameter
-    org.hibernate.SQL: DEBUG             # ausgeführte SQL-Statements
-    org.hibernate.orm.jdbc.bind: TRACE   # Werte, die an '?' gebunden werden
-    org.hibernate.orm.jdbc.extract: TRACE # ResultSet-Auslesen (bei Bedarf)
+    # (1) Core – Hibernate / SQL
+    org.hibernate.SQL:                DEBUG
+    org.hibernate.orm.jdbc.bind:      TRACE
+    org.hibernate.orm.jdbc.extract:   TRACE
 
-    # Falls noch Hibernate-5-Artefakte oder Libraries im Projekt wären,
-    # kannst du zur Sicherheit die alten Kategorien zusätzlich freischalten:
-    # org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    # (2) Spring Security / JWT
+    org.springframework.security:     DEBUG
+    org.springframework.security.oauth2: DEBUG
+
+    # (3) WebSocket / STOMP
+    org.springframework.web.socket:                   DEBUG
+    org.springframework.web.socket.client:            DEBUG
+    org.springframework.web.socket.server:            DEBUG
+    org.springframework.web.socket.messaging:         DEBUG
+    org.springframework.messaging.simp:               DEBUG
+    org.springframework.messaging.simp.stomp:         TRACE
+    org.springframework.web.socket.server.HandshakeHandler: DEBUG
+    org.springframework.web.socket.messaging.SubProtocolWebSocketHandler: DEBUG
+
+    # (4) Eigene Game-Klassen (Namespace-Beispiel)
+    de.mythcards.game:                DEBUG
+
+    # (5) Root-Fallback (sparsam benutzen!)
+    # root: INFO

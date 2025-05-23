@@ -374,7 +374,6 @@ public class ClientMain extends GameApplication {
                     stage.setTitle("Chat mit " + friend.username());
                     stage.setScene(new Scene(pane, 400, 600));
 
-                    chatSocket.subscribeToConversation(convId, pane::addMessage);
                     loadHistory(convId, pane);
 
                     HBox inputBar = createInputBar(convId, pane);

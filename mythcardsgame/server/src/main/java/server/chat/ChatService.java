@@ -9,8 +9,11 @@ import common.BadgeUpdateDTO;
 import common.ChatMessageDTO;
 import common.ImportantUpdateDTO;
 import io.github.bucket4j.*;
+import server.UserEntity;
+import server.UserRepository;
 
 import java.time.*;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -19,16 +22,21 @@ public class ChatService {
     private final ConversationRepository convRepo;
     private final ChatMessageRepository  msgRepo;
     private final ParticipantStateRepository stateRepo;
+    private final UserRepository userRepo;  
     private final SimpMessagingTemplate broker;
     private final Bucket bucket;
 
     @Autowired
-    public ChatService(ConversationRepository convRepo, ChatMessageRepository msgRepo,
-                       ParticipantStateRepository stateRepo, SimpMessagingTemplate broker) {
-        this.convRepo = convRepo;
-        this.msgRepo  = msgRepo;
-        this.stateRepo = stateRepo;
-        this.broker   = broker;
+    public ChatService(ConversationRepository convRepo,
+            ChatMessageRepository msgRepo,
+            ParticipantStateRepository stateRepo,
+            UserRepository userRepo,            // ② ctor-param
+            SimpMessagingTemplate broker) {
+    	this.convRepo  = convRepo;
+    	this.msgRepo   = msgRepo;
+    	this.stateRepo = stateRepo;
+    	this.userRepo  = userRepo;                        // ③ Merk dir!
+    	this.broker    = broker;
         this.bucket   = Bucket.builder()
                 .addLimit(Bandwidth.simple(20, Duration.ofSeconds(10)))
                 .build();
@@ -44,7 +52,7 @@ public class ChatService {
 
         ChatMessageDTO dto = new ChatMessageDTO(convId, msg.getId(), sender,
                                                 msg.getCreatedAt(), text, important);
-        broker.convertAndSend("/topic/conversation." + convId, dto);
+        broker.convertAndSend("/topic/conversation/" + convId, dto);
 
         /* -------- Badge‑Update für alle anderen Teilnehmer -------- */
         for (ConversationParticipant cp : conv.getParticipants()) {
@@ -74,6 +82,36 @@ public class ChatService {
 
         msgRepo.updateImportant(messageId, important);
         ImportantUpdateDTO upd = new ImportantUpdateDTO(conv.getId(), messageId, important);
-        broker.convertAndSend("/topic/conversation." + conv.getId(), upd);
+        broker.convertAndSend("/topic/conversation/" + conv.getId(), upd);
+    }
+    
+    @Transactional
+    public void readAck(UUID userId, UUID convId) {
+
+        Conversation conv = convRepo.findById(convId).orElseThrow();
+
+        /* State holen oder lazily anlegen */
+        ParticipantState state = stateRepo.findById(new ParticipantState.Id(convId, userId))
+            .orElseGet(() -> {
+                UserEntity user = userRepo.getReferenceById(userId);   // <<< ersetzt getUser()
+                return new ParticipantState(conv, user);
+            });
+
+        state.setLastReadAt(Instant.now());
+        stateRepo.save(state);
+
+        /* Badge zurücksetzen – an **alle** Tabs des Users pushen */
+        broker.convertAndSend("/user/" + userId + "/queue/badge",
+                              new BadgeUpdateDTO(convId, 0));
+    }
+    
+    @Transactional(readOnly = true)
+    public List<ChatMessageDTO> loadHistory(UUID convId,
+                                            Instant before,
+                                            int size) {
+        return msgRepo.loadHistory(convId, before, size)
+                      .stream()
+                      .map(ChatMapper::toDTO)
+                      .toList();
     }
 }

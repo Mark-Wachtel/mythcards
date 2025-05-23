@@ -1,16 +1,11 @@
 package server.chat;
 
+import common.ChatMessageDTO;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
-import common.ChatMessageDTO;
-
-import org.springframework.format.annotation.DateTimeFormat;
-
-import server.UserEntity;
-import server.UserRepository;
 
 import java.security.Principal;
 import java.time.Instant;
@@ -21,61 +16,60 @@ import java.util.UUID;
 @RequestMapping("/api/chat")
 public class ChatRestController {
 
-    private final ChatMessageRepository repo;
-    private final ParticipantStateRepository stateRepo;
+    /* --------------------------------------------------
+     * Dependencies
+     * -------------------------------------------------- */
+    private final ChatService            chatService;
     private final ConversationRepository convRepo;
-    private final UserRepository userRepo;    // << neu!
 
-    public ChatRestController(ChatMessageRepository repo,
-                              ParticipantStateRepository stateRepo,
-                              ConversationRepository convRepo,
-                              UserRepository userRepo) {
-        this.repo      = repo;
-        this.stateRepo = stateRepo;
-        this.convRepo  = convRepo;
-        this.userRepo  = userRepo;
+    /* --------------------------------------------------
+     * Constructor-Injection  (ohne Lombok)
+     * -------------------------------------------------- */
+    public ChatRestController(ChatService chatService,
+                              ConversationRepository convRepo) {
+        this.chatService = chatService;
+        this.convRepo    = convRepo;
     }
 
+    /* --------------------------------------------------
+     * 1) Badge-Reset („read-ack“)
+     * -------------------------------------------------- */
     @GetMapping("/readAck")
     public void ackRead(@RequestParam UUID convId,
                         Principal principal) {
+
         UUID userId = UUID.fromString(principal.getName());
-        Conversation conv = convRepo.findById(convId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        UserEntity user = userRepo.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        ParticipantState.Id key = new ParticipantState.Id(convId, userId);
-        ParticipantState st = stateRepo.findById(key)
-            .orElseGet(() -> new ParticipantState(conv, user));
-
-        st.setLastReadAt(Instant.now());
-        stateRepo.save(st);
+        chatService.readAck(userId, convId);     // komplett im Service
     }
-    
+
+    /* --------------------------------------------------
+     * 2) Chat-History Pagination
+     * -------------------------------------------------- */
     @Transactional(readOnly = true)
     @GetMapping("/history")
-    public List<ChatMessageDTO> getHistory(@RequestParam UUID convId,
-                                           @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant before,
-                                           @RequestParam(defaultValue = "25") int size,
-                                           Principal principal) {
+    public List<ChatMessageDTO> history(@RequestParam UUID convId,
+                                        @RequestParam
+                                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+                                        Instant before,
+                                        @RequestParam(defaultValue = "25") int size,
+                                        Principal principal) {
+
         UUID userId = UUID.fromString(principal.getName());
 
-        // TODO: Überprüfen, ob user überhaupt Teilnehmer der Conversation ist!
+        /* --- Autorisierung: ist User Teilnehmer? --- */
         Conversation conv = convRepo.findById(convId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                                    .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        boolean isMember = conv.getParticipants().stream()
-            .anyMatch(p -> p.getUserId().equals(userId));
+        boolean member = conv.getParticipants()
+                             .stream()
+                             .anyMatch(p -> p.getUserId().equals(userId));
 
-        if (!isMember) {
+        if (!member) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        return repo.loadHistory(convId, before, size)
-                   .stream()
-                   .map(ChatMapper::toDTO)
-                   .toList();
+        /* --- Daten abrufen --- */
+        return chatService.loadHistory(convId, before, size);
     }
 }

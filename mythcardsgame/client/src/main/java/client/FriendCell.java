@@ -1,82 +1,118 @@
 package client;
 
-import common.FriendDTO;
-import javafx.beans.binding.Bindings;
-import javafx.collections.*;
-import javafx.geometry.Pos;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
+    import common.FriendDTO;
+    import javafx.beans.binding.Bindings;
+    import javafx.collections.ObservableMap;
+    import javafx.collections.ObservableSet;
+    import javafx.collections.SetChangeListener;
+    import javafx.geometry.Pos;
+    import javafx.scene.control.ContentDisplay;
+    import javafx.scene.control.Label;
+    import javafx.scene.control.ListCell;
+    import javafx.scene.layout.HBox;
+    import javafx.scene.layout.Priority;
+    import javafx.scene.layout.Region;
+    import javafx.scene.paint.Color;
+    import javafx.scene.shape.Circle;
 
-import java.util.Optional;
-import java.util.UUID;
+    import java.util.Optional;
+    import java.util.UUID;
 
-public class FriendCell extends ListCell<FriendDTO> {
+    public class FriendCell extends ListCell<FriendDTO> {
 
-    private final ObservableMap<UUID,Integer> unread;
-    private final ObservableSet<UUID> online;
+        /* ------------------------------------------------------------
+         * Datenquellen, die von außen hereingereicht werden
+         * ------------------------------------------------------------ */
+        private final ObservableMap<UUID, Integer> unread;   // convId → Anzahl
+        private final ObservableSet<UUID> online;            // userIds online
 
-    private final Label name  = new Label();
-    private final Label badge = new Label();
-    private final Circle dot  = new Circle(5);
+        /* ------------------------------------------------------------
+         * UI-Controls
+         * ------------------------------------------------------------ */
+        private final Label   name  = new Label();
+        private final Label   badge = new Label();
+        private final Circle  dot   = new Circle(5);
+        private final HBox    box   = new HBox(8, dot, name, badge);
 
-    private final HBox box;
+        /* ------------------------------------------------------------
+         * Listener-Referenz, damit er bei Zell-Recycle entfernt werden kann
+         * ------------------------------------------------------------ */
+        private SetChangeListener<? super UUID> presenceListener;
 
-    public FriendCell(ObservableMap<UUID,Integer> unread,
-                      ObservableSet<UUID> online) {
-        this.unread = unread;
-        this.online = online;
+        /* ------------------------------------------------------------
+         * Konstruktor
+         * ------------------------------------------------------------ */
+        public FriendCell(ObservableMap<UUID, Integer> unread,
+                          ObservableSet<UUID> online) {
+            this.unread  = unread;
+            this.online  = online;
 
-        badge.getStyleClass().add("badge");
-        badge.setMinSize(18,18);
-        badge.setAlignment(Pos.CENTER);
-        badge.setVisible(false);
+            // ► Badge-Styling
+            badge.getStyleClass().add("badge");
+            badge.setMinSize(18, 18);
+            badge.setAlignment(Pos.CENTER);
+            badge.setVisible(false);
 
-        name.setTextFill(Color.WHITE);
-        name.setMinWidth(Region.USE_PREF_SIZE);
-        HBox.setHgrow(name, Priority.ALWAYS);
+            // ► Name-Label
+            name.setTextFill(Color.WHITE);
+            name.setMinWidth(Region.USE_PREF_SIZE);
+            HBox.setHgrow(name, Priority.ALWAYS);
 
-        box = new HBox(8, dot, name, badge);
-        box.setAlignment(Pos.CENTER_LEFT);
+            // ► Container
+            box.setAlignment(Pos.CENTER_LEFT);
 
-        setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-    }
-
-    @Override
-    protected void updateItem(FriendDTO fr, boolean empty) {
-        super.updateItem(fr, empty);
-        if (empty || fr == null) {
-            setGraphic(null);
-            return;
+            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         }
 
-        System.out.println("username is: " + fr.username() + " updateItem aufgerufen!");
-        name.setText(fr.username());
+        /* ------------------------------------------------------------
+         * Zelle (neu) befüllen
+         * ------------------------------------------------------------ */
+        @Override
+        protected void updateItem(FriendDTO fr, boolean empty) {
+            super.updateItem(fr, empty);
 
-        /* Präsenz-Binding (userId) */
-        dot.setFill(online.contains(fr.userId()) ? Color.LIMEGREEN : Color.GRAY);
-        online.addListener((SetChangeListener<? super UUID>) c ->
-            dot.setFill(online.contains(fr.userId()) ? Color.LIMEGREEN : Color.GRAY)
-        );
+            /* ▸ Alten Presence-Listener abmelden, wenn vorhanden */
+            if (presenceListener != null) {
+                online.removeListener(presenceListener);
+                presenceListener = null;
+            }
 
-        /* Badge-Binding (conversationId) */
-        badge.textProperty().bind(
-            Bindings.createStringBinding(
-                () -> Optional.ofNullable(unread.get(fr.conversationId()))
-                              .filter(c -> c > 0)
-                              .map(Object::toString)
-                              .orElse(""),
-                unread
-            )
-        );
-        badge.visibleProperty().bind(
-            Bindings.createBooleanBinding(
-                () -> unread.getOrDefault(fr.conversationId(),0) > 0,
-                unread
-            )
-        );
+            if (empty || fr == null) {
+                setGraphic(null);
+                return;
+            }
 
-        setGraphic(box);
+            /* ▸ Name */
+            name.setText(fr.username());
+
+            /* ▸ Presence-Dot ----------------------------------- */
+            presenceListener = change ->
+                    dot.setFill(online.contains(fr.userId())
+                            ? Color.LIMEGREEN
+                            : Color.GRAY);
+
+            online.addListener(presenceListener);
+            // sofortigen Initial-Refresh auslösen
+            presenceListener.onChanged(null);
+
+            /* ▸ Badge-Binding ----------------------------------- */
+            badge.textProperty().bind(
+                    Bindings.createStringBinding(
+                            () -> Optional.ofNullable(unread.get(fr.conversationId()))
+                                          .filter(c -> c > 0)
+                                          .map(Object::toString)
+                                          .orElse(""),
+                            unread
+                    )
+            );
+            badge.visibleProperty().bind(
+                    Bindings.createBooleanBinding(
+                            () -> unread.getOrDefault(fr.conversationId(), 0) > 0,
+                            unread
+                    )
+            );
+
+            /* ▸ finale Grafik setzen */
+            setGraphic(box);
+        }
     }
-}
