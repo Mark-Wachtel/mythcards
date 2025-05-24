@@ -55,6 +55,7 @@ public class ChatWindow extends BorderPane {
 
     /* --- Konstruktor ------------------------------------------------------ */
     public ChatWindow(UUID conversationId, ChatSocket socket) {
+    	System.out.println("⚠ ChatWindow CREATED for " + conversationId);
         this.conversationId = conversationId;
         this.socket = socket;
 

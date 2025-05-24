@@ -21,7 +21,7 @@ public class SubscribeAuthInterceptor implements ChannelInterceptor {
         StompHeaderAccessor h = StompHeaderAccessor.wrap(msg);
         if (StompCommand.SUBSCRIBE.equals(h.getCommand())) {
             String dest = h.getDestination();     // /topic/conversation.{id}
-            if (dest != null && dest.startsWith("/topic/conversation.")) {
+            if (dest != null && dest.startsWith("/topic/conversation/")) {
                 UUID convId = UUID.fromString(dest.substring(dest.lastIndexOf('.')+1));
                 UUID uid    = UUID.fromString(h.getUser().getName());
                 boolean ok  = repo.findById(convId)

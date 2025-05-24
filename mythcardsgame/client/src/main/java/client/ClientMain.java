@@ -34,10 +34,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 public class ClientMain extends GameApplication {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper().registerModule(new JavaTimeModule()).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Preferences prefs = Preferences.userNodeForPackage(ClientMain.class);
     private final FriendServiceClient friendClient = new FriendServiceClient();

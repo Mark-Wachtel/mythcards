@@ -86,7 +86,7 @@ public class DataInitializer implements CommandLineRunner {
             requestRepo.save(fr);
             fr.setStatus(FriendRequestEntity.FriendRequestStatus.ACCEPTED);
             requestRepo.save(fr);
-            FriendshipEntity friendship = new FriendshipEntity(user, admin);
+            FriendshipEntity friendship = FriendshipEntity.create(user, admin);
             friendshipRepo.save(friendship);
 
             // -------- Conversation --------

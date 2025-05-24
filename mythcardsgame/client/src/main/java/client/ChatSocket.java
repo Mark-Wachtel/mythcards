@@ -94,7 +94,7 @@ public class ChatSocket {
     private void subscribeUserQueues() {
         System.out.println("[DEBUG] Subscribing zu /user/queue/badge & /user/queue/presence");
         session.subscribe("/user/queue/badge", new JsonFrameHandler<>(BadgeUpdateDTO.class, this::handleBadge));
-        session.subscribe("/user/queue/presence", new JsonFrameHandler<>(PresenceDTO.class, this::handlePresence));
+        session.subscribe("/user/queue/friendsPresence", new JsonFrameHandler<>(PresenceDTO.class, this::handlePresence));
     }
 
     public void send(String destination, Object payload) {
@@ -114,7 +114,7 @@ public class ChatSocket {
     private void handlePresence(PresenceDTO dto) {
         System.out.println("[DEBUG] Presence-Update empfangen: " + dto);
         Platform.runLater(() -> {
-            if ("ONLINE".equalsIgnoreCase(dto.status())) {
+            if (dto.online()) {          // ← boolean-Getter
                 onlineSet.add(dto.userId());
             } else {
                 onlineSet.remove(dto.userId());
@@ -160,7 +160,7 @@ public class ChatSocket {
                 throw new IllegalStateException("WebSocket noch nicht verbunden", ex);
             }
 
-            String topic = "/topic/conversation/" + convId;
+            String topic = "/topic/conversation." + convId;
             System.out.println("[DEBUG] Subscribing zu: " + topic);
             session.subscribe(topic, new JsonFrameHandler<>(ChatMessageDTO.class, onMessage));
         });

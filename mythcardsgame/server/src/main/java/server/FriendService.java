@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -91,6 +92,11 @@ public class FriendService {
         return dtos;
     }
 
+    /** Alle bestätigten Freunde (UUIDs) eines Nutzers. */
+    public Set<UUID> listFriends(UUID userId) {
+        return friendshipRepository.findAcceptedFriendIds(userId);
+    }
+    
     /**
      * Prüft, ob zwei Benutzer befreundet sind (in beliebiger Richtung).
      */
@@ -207,7 +213,7 @@ public class FriendService {
 
         request.setStatus(FriendRequestEntity.FriendRequestStatus.ACCEPTED);
 
-        friendshipRepository.save(new FriendshipEntity(request.getSender(),
+        friendshipRepository.save(FriendshipEntity.create(request.getSender(),
                                                        request.getReceiver()));
         return true;
     }
