@@ -4,41 +4,54 @@
 ###############################################################################
 
 spring:
-
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   # Datenquelle (MySQL)
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   datasource:
     url: jdbc:mysql://localhost:3306/myth_cards
     username: root
-    password: Le@gueOfLegendz2018!     # via Env-Var überschreibbar
+    password: '${DB_PASSWORD:Le@gueOfLegendz2018!}'   # via ENV überschreibbar
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   # JPA / Hibernate
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   jpa:
     hibernate:
-      ddl-auto: validate                      # nix automatisch ändern
+      ddl-auto: validate                      # keine Schema-Änderungen
     open-in-view: false                       # kein Lazy-Loading im View-Layer
     show-sql: true                            # rohes SQL loggen
     properties:
-      hibernate.format_sql: true              # hübsch formatiert
+      hibernate.format_sql: true              # formatiertes SQL
       hibernate.highlight_sql: true           # ANSI-Farben
       # hibernate.generate_statistics: true   # (optional) Query-Stats
 
-  # ---------------------------------------------------------------------------
-  # Security / JWT
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # RabbitMQ (AMQP) – Admin & Verbindung
+  # -------------------------------------------------------------------------
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+
+    admin:
+      enabled: true                           # RabbitAdmin-Bean erzeugen
+
+  # -------------------------------------------------------------------------
+  # Security / JWT  (Spring-Security-Teil)
+  # -------------------------------------------------------------------------
   security:
     oauth2:
       resourceserver:
         jwt:
-          secret: JWT_SECRET:superSecret_1234567890
+          secret: ${JWT_SECRET:Q29tcGxleE15dGhDYXJkczI5NlN0YWJsZUtleTEyMw==}
 
-# Globale JWT-Optionen (non-spring, eigenes Prefex)
+# ---------------------------------------------------------------------------
+# Globale JWT-Optionen (eigener Namespace, falls programmintern ausgelesen)
+# ---------------------------------------------------------------------------
 jwt:
-  secret: JWT_SECRET:superSecret_1234567890
+  secret: ${JWT_SECRET:Q29tcGxleE15dGhDYXJkczI5NlN0YWJsZUtleTEyMw==}
   exp: PT1H                                   # ISO-8601-Duration (1 h)
 
 # ---------------------------------------------------------------------------
@@ -46,10 +59,10 @@ jwt:
 # ---------------------------------------------------------------------------
 stomp:
   relay:
-    host: STOMP_HOST:localhost
-    port: STOMP_PORT:61613                # STOMP-Port von RabbitMQ
-    login: STOMP_LOGIN:guest
-    passcode: STOMP_PASSCODE:guest
+    host: ${STOMP_HOST:localhost}
+    port: ${STOMP_PORT:61613}
+    login: ${STOMP_LOGIN:guest}
+    passcode: ${STOMP_PASSCODE:guest}
 
 # ---------------------------------------------------------------------------
 # Server-Port (falls du nicht 8080 willst)
@@ -62,15 +75,14 @@ server:
 # ---------------------------------------------------------------------------
 logging:
   level:
-
     # (1) Core – Hibernate / SQL
-    org.hibernate.SQL:                DEBUG
-    org.hibernate.orm.jdbc.bind:      TRACE
-    org.hibernate.orm.jdbc.extract:   TRACE
+    org.hibernate.SQL:                      DEBUG
+    org.hibernate.orm.jdbc.bind:            TRACE
+    org.hibernate.orm.jdbc.extract:         TRACE
 
     # (2) Spring Security / JWT
-    org.springframework.security:     DEBUG
-    org.springframework.security.oauth2: DEBUG
+    org.springframework.security:           DEBUG
+    org.springframework.security.oauth2:    DEBUG
 
     # (3) WebSocket / STOMP
     org.springframework.web.socket:                   DEBUG
@@ -82,8 +94,8 @@ logging:
     org.springframework.web.socket.server.HandshakeHandler: DEBUG
     org.springframework.web.socket.messaging.SubProtocolWebSocketHandler: DEBUG
 
-    # (4) Eigene Game-Klassen (Namespace-Beispiel)
-    de.mythcards.game:                DEBUG
+    # (4) Eigene Game-Klassen
+    de.mythcards.game:                      DEBUG
 
     # (5) Root-Fallback (sparsam benutzen!)
     # root: INFO

@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 public class BadgeQueueService {
 
     private final TopicExchange badgeExchange;
-    private final RabbitAdmin      rabbitAdmin;
+    private final AmqpAdmin      rabbitAdmin;
 
     public BadgeQueueService(TopicExchange badgeExchange,
-                             RabbitAdmin rabbitAdmin) {
+    		AmqpAdmin rabbitAdmin) {
         this.badgeExchange = badgeExchange;
         this.rabbitAdmin   = rabbitAdmin;
     }
