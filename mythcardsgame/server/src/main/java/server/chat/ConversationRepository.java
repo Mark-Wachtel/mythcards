@@ -30,4 +30,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
          WHERE p.userId = :userId
     """)
     List<Conversation> findAllForUser(UUID userId);
+    
+    @Query("SELECT c.id FROM Conversation c JOIN c.participants p WHERE p.userId = :userId")
+    List<UUID> findAllConversationIdsByUserId(@Param("userId") UUID userId);
 }

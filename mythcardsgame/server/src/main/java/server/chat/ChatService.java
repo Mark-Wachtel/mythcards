@@ -184,4 +184,15 @@ return msgRepo.loadHistory(convId, before, size)
 .map(ChatMapper::toDTO)
 .toList();
 }
+    
+    public int countUnreadMessages(UUID conversationId, UUID userId) {
+        // Hole lastReadAt für den User in dieser Konversation
+    	Instant lastReadAt = stateRepo
+            .findByConversationIdAndUserId(conversationId, userId)
+            .map(ParticipantState::getLastReadAt)
+            .orElse(Instant.EPOCH);
+
+        return msgRepo
+            .countByConversationIdAndCreatedAtAfter(conversationId, lastReadAt);
+    }
     }

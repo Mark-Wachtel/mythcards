@@ -1,6 +1,7 @@
 package server.chat;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -75,4 +76,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
          GROUP BY m.conversation_id
     """, nativeQuery = true)
     List<BadgeUpdateDTO> unreadCounts(UUID userId);
+    
+    int countByConversationIdAndCreatedAtAfter(UUID conversationId, Instant lastReadAt);
 }

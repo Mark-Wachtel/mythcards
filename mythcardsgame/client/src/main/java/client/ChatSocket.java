@@ -1,5 +1,6 @@
 package client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import common.BadgeUpdateDTO;
@@ -24,7 +25,12 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -66,7 +72,7 @@ public class ChatSocket {
         WebSocketHttpHeaders handshakeHeaders = new WebSocketHttpHeaders();
         handshakeHeaders.add("Authorization", "Bearer " + jwt);   // ① HIER!
 
-        StompHeaders connectHeaders = new StompHeaders();         // ② Kann leer bleiben
+        StompHeaders connectHeaders = new StompHeaders();   
         // connectHeaders.add("Authorization", "Bearer " + jwt);  // nicht mehr nötig
 
         stomp.connect(
@@ -164,5 +170,41 @@ public class ChatSocket {
             System.out.println("[DEBUG] Subscribing zu: " + topic);
             session.subscribe(topic, new JsonFrameHandler<>(ChatMessageDTO.class, onMessage));
         });
+    }
+    
+    public void loadUnreadSummary() {
+    	String ep = "http://localhost:8080" + "/api/chat/unreadSummary";
+    	System.out.println("ep= " + ep);
+    	HttpRequest request = HttpRequest.newBuilder()
+    	    .uri(URI.create(ep))
+    	    .header("Authorization", "Bearer " + jwt)
+    	    .GET()
+    	    .build();
+    	System.out.println("request: "+request.toString());
+    	HttpClient client = HttpClient.newHttpClient();
+    	System.out.println("client: " + client.toString());
+    	try {
+    	    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    	    System.out.println("body: "+response.body());
+    	    if (response.statusCode() == 200) {
+    	        // Jackson für Map<UUID, Integer>
+    	        ObjectMapper mapper = new ObjectMapper();
+    	        Map<String, Integer> unreadRaw = mapper.readValue(response.body(), new TypeReference<>() {});
+    	        
+    	        // Umwandlung Map<String, Integer> → Map<UUID, Integer>
+    	        Map<UUID, Integer> unreadSummary = new HashMap<>();
+    	        unreadRaw.forEach((key, val) -> unreadSummary.put(UUID.fromString(key), val));
+    	        
+    	        // Deine unreadMap im ChatSocket updaten
+    	        unreadSummary.forEach((convId, count) -> unreadMap.put(convId, count));
+    	    } else {
+    	        // Fehlerbehandlung (optional UI-Alert oder Logging)
+    	        System.err.println("UnreadSummary-Fehler: HTTP " + response.statusCode());
+    	    }
+    	} catch (Exception e) {
+    	    // Fehlerbehandlung (optional)
+    		System.out.println("error");
+    	    e.printStackTrace();
+    	}
     }
 }

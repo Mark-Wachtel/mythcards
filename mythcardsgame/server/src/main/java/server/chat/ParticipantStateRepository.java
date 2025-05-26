@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ParticipantStateRepository extends JpaRepository<ParticipantState, ParticipantState.Id> {
     Optional<ParticipantState> findById_ConversationIdAndId_UserId(UUID conversationId, UUID userId);
+    Optional<ParticipantState> findByConversationIdAndUserId(UUID conversationId, UUID userId);
 }

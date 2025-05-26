@@ -14,7 +14,9 @@ import server.UserRepository;
 
 import java.security.Principal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -39,6 +41,18 @@ public class ChatRestController {
         this.chatService = chatService;
     }
 
+    @GetMapping("/unreadSummary")
+    public Map<UUID, Integer> getUnreadCountsForUser(Principal principal) {
+        UUID userId = UUID.fromString(principal.getName());
+        List<UUID> conversationIds = convRepo.findAllConversationIdsByUserId(userId);
+        Map<UUID, Integer> result = new HashMap<>();
+        for (UUID convId : conversationIds) {
+            int unread = chatService.countUnreadMessages(convId, userId);
+            result.put(convId, unread);
+        }
+        return result;
+    }
+    
     @GetMapping("/readAck")
     public void ackRead(@RequestParam UUID convId,
                         Principal principal) {

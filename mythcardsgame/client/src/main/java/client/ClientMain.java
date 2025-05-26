@@ -336,6 +336,9 @@ public class ClientMain extends GameApplication {
         wrapper.getChildren().add(combinedListView);
         wrapper.setPadding(new Insets(10));
         wrapper.setPrefWidth(250);
+        System.out.println("check");
+        chatSocket.loadUnreadSummary();
+        System.out.println(chatSocket.getUnreadMap().values().toString());
         return wrapper;
     }
 
@@ -346,6 +349,8 @@ public class ClientMain extends GameApplication {
                 chatSocket.getFriendObservableList().setAll(list);
                 root.setRight(createFriendsView());
             }));
+        chatSocket.loadUnreadSummary();
+        System.out.println("reloaded friend ui...");
     }
 
     private void showAddFriendDialog() {
