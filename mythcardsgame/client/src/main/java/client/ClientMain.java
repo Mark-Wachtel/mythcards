@@ -376,12 +376,12 @@ public class ClientMain extends GameApplication {
     private void openChat(FriendDTO friend) {
         ensureConversation(friend.userId(), friend.conversationId())
                 .thenAccept(convId -> Platform.runLater(() -> {
-                    ChatWindow pane = new ChatWindow(convId, chatSocket);
+                    ChatWindow pane = new ChatWindow(convId, chatSocket, currentUserId);
                     Stage stage = new Stage();
                     stage.setTitle("Chat mit " + friend.username());
                     stage.setScene(new Scene(pane, 400, 600));
 
-                    loadHistory(convId, pane);
+                  
 
                     HBox inputBar = createInputBar(convId, pane);
                     pane.setBottom(inputBar);
@@ -390,25 +390,6 @@ public class ClientMain extends GameApplication {
                 .exceptionally(ex -> {
                     Platform.runLater(() -> showAlert("Fehler", ex.getMessage()));
                     return null;
-                });
-    }
-
-    private void loadHistory(UUID convId, ChatWindow pane) {
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/api/chat/history?convId=" + convId))
-                .header("Authorization", "Bearer " + accessToken)
-                .GET()
-                .build();
-        httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(resp -> {
-                    if (resp.statusCode() == 200) {
-                        try {
-                            List<ChatMessageDTO> msgs = MAPPER.readValue(resp.body(), new com.fasterxml.jackson.core.type.TypeReference<>(){});
-                            Platform.runLater(() -> msgs.forEach(pane::addMessage));
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
                 });
     }
 

@@ -36,11 +36,13 @@ public class ChatWindow extends BorderPane {
     /* --- Konstanten ------------------------------------------------------ */
     private static final int PAGE_SIZE = 25;
     private static final Duration SCROLL_TOLERANCE = Duration.millis(50);
+    private static final double SCROLL_TOLERANCE1 = 0.1;
 
     /* --- Abhängigkeiten --------------------------------------------------- */
     private final UUID conversationId;
     private final ChatSocket socket;
     private final String accessToken = ClientMain.getAccessToken();
+    private final UUID currentUserId;
 
     /* --- UI & State ------------------------------------------------------- */
     private final ListView<ChatMessageDTO> list = new ListView<>();
@@ -54,10 +56,11 @@ public class ChatWindow extends BorderPane {
     private ScrollBar vBar;
 
     /* --- Konstruktor ------------------------------------------------------ */
-    public ChatWindow(UUID conversationId, ChatSocket socket) {
+    public ChatWindow(UUID conversationId, ChatSocket socket, UUID currentUserId) {
     	System.out.println("⚠ ChatWindow CREATED for " + conversationId);
         this.conversationId = conversationId;
         this.socket = socket;
+        this.currentUserId = currentUserId;
 
         list.setItems(items);
         list.setCellFactory(v -> new ChatMessageCell());
@@ -75,35 +78,60 @@ public class ChatWindow extends BorderPane {
      *  Scroll-Handling                                                      *
      * ===================================================================== */
     private void initScrollHandling() {
-        vBar = findVerticalBar(list);
-        if (vBar == null) return;        // sollte nie passieren
+       
+    	vBar = findVerticalBar(list);
+        if (vBar == null) return; // Sollte nie passieren
 
-        /* Listener für Hoch/Runter-Scrollen */
+        /* Listener für Hoch/Runter-Scrollen mit Toleranz */
         vBar.valueProperty().addListener((obs, oldVal, newVal) -> {
             double val = newVal.doubleValue();
-
-            /* ganz unten?  -> readAck */
-            if (almostEquals(val, 1)) {
+            
+            if (isNearBottom()) {
+                // Wenn wir im letzten TOLERANZ-Bereich sind, als „ganz unten“ werten
                 ackRead();
             }
-            /* ganz oben?   -> ältere Seite nachladen */
-            else if (almostEquals(val, 0) && !loading.get()) {
+            else if (isNearTop() && !loading.get()) {
+                // Wenn wir im ersten TOLERANZ-Bereich sind, ältere Seite nachladen
                 loadHistory();
             }
         });
 
-        /* Listener für neue Items: falls unten, autoscrollen */
-        items.addListener((ListChangeListener<ChatMessageDTO>) c -> {
-            if (isAtBottom()) {
+        /* Listener für neue Items:
+           - Eigene Nachrichten => immer scrollToEnd()
+           - Alle anderen nur, wenn man ohnehin schon nahe am unteren Ende ist */
+        items.addListener((ListChangeListener<ChatMessageDTO>) change -> {
+            while (change.next()) {
+                if (!change.wasAdded()) continue;
+                for (ChatMessageDTO msg : change.getAddedSubList()) {
+                    boolean own = msg.senderId().equals(currentUserId);
+                    if (own || isNearBottom()) {
+                        scrollToEnd();
+                        break;  // genügt einmal pro Batch
+                    }
+                }
+            }
+        });
+
+        // Beim ersten Anzeigen direkt ans Ende scrollen
+        Platform.runLater(() -> {
+            if (vBar != null) vBar.setValue(vBar.getMax());
+        });
+    }
+
+    private boolean isNearBottom() {
+        return vBar == null || vBar.getValue() >= (vBar.getMax() * (1 - SCROLL_TOLERANCE1));
+    }
+
+    private boolean isNearTop() {
+        return vBar == null || vBar.getValue() <= (vBar.getMax() * SCROLL_TOLERANCE1);
+    }
+
+    private void scrollToEnd() {
+        Platform.runLater(() -> {
+            if (!items.isEmpty()) {
                 list.scrollTo(items.size() - 1);
             }
         });
-        
-        Platform.runLater(() -> vBar.setValue(1));
-    }
-
-    private boolean isAtBottom() {
-        return vBar == null || almostEquals(vBar.getValue(), 1);
     }
 
     private static boolean almostEquals(double a, double b) {
@@ -118,7 +146,6 @@ public class ChatWindow extends BorderPane {
         }
         return null;
     }
-
     /* ===================================================================== *
      *  REST-Calls (History + ReadAck)                                       *
      * ===================================================================== */
