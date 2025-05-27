@@ -1,6 +1,7 @@
 package server.chat;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -12,6 +13,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import server.UserEntity;
 import server.UserRepository;
 
+import java.nio.file.attribute.UserPrincipal;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.HashMap;
@@ -54,22 +56,10 @@ public class ChatRestController {
     }
     
     @GetMapping("/readAck")
-    public void ackRead(@RequestParam UUID convId,
-                        Principal principal) {
-        UUID userId = UUID.fromString(principal.getName());
-        Conversation conv = convRepo.findById(convId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        UserEntity user = userRepo.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        ParticipantState.Id key = new ParticipantState.Id(convId, userId);
-        ParticipantState st = stateRepo.findById(key)
-            .orElseGet(() -> new ParticipantState(conv, user));
-
-        st.setLastReadAt(Instant.now());
-        stateRepo.save(st);
-    }
+        public void acknowledgeRead(@RequestParam("convId") UUID conversationId,Principal principal) {
+    	UUID userId = UUID.fromString(principal.getName());
+    	chatService.readAck(userId, conversationId);
+        }
     
     @Transactional(readOnly = true)
     @GetMapping("/history")

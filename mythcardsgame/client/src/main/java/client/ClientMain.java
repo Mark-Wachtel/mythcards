@@ -490,6 +490,7 @@ public class ClientMain extends GameApplication {
         friendClient.setAccessToken(null);
         prefs.remove("username");
         prefs.remove("password");
+        chatSocket.disconnect();
         showLoginScene();
     }
 

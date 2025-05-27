@@ -1,6 +1,7 @@
 package client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import common.BadgeUpdateDTO;
@@ -96,11 +97,42 @@ public class ChatSocket {
             }
         });
     }
+    
+    public void disconnect() {
+    	session.disconnect();
+    }
 
     private void subscribeUserQueues() {
-        System.out.println("[DEBUG] Subscribing zu /user/queue/badge & /user/queue/presence");
+        System.out.println("[DEBUG] Subscribing zu /user/queue/badge & /user/queue/friendsPresence");
         session.subscribe("/user/queue/badge", new JsonFrameHandler<>(BadgeUpdateDTO.class, this::handleBadge));
-        session.subscribe("/user/queue/friendsPresence", new JsonFrameHandler<>(PresenceDTO.class, this::handlePresence));
+        session.subscribe("/user/queue/friendsPresence",
+                new StompFrameHandler() {
+  @Override public Type getPayloadType(StompHeaders h) { return byte[].class; }
+
+  @Override public void handleFrame(StompHeaders h, Object p) {
+      try {
+          byte[] bytes = (byte[]) p;
+          JsonNode root = mapper.readTree(bytes);
+
+          // decide which DTO we got
+          if (root.has("friendsOnline")) {             // PresenceInitDTO
+              for (JsonNode idNode : root.get("friendsOnline")) {
+                  UUID id = UUID.fromString(idNode.asText());
+                  Platform.runLater(() -> onlineSet.add(id));
+              }
+          } else {                                     // PresenceDTO
+              UUID friendId = UUID.fromString(root.get("userId").asText());
+              boolean isOnline = root.get("online").asBoolean();
+              Platform.runLater(() -> {
+                  if (isOnline) onlineSet.add(friendId);
+                  else          onlineSet.remove(friendId);
+              });
+          }
+      } catch (Exception ex) {
+          ex.printStackTrace();
+      }
+  }
+});
     }
 
     public void send(String destination, Object payload) {

@@ -204,20 +204,33 @@ public class FriendService {
     @Transactional
     public boolean acceptFriendRequest(UUID requestId) {
 
-        FriendRequestEntity request = requestRepository.findById(requestId).orElse(null);
+        // 1) Request laden
+        FriendRequestEntity request = requestRepository.findById(requestId)
+            .orElse(null);
 
-        if (request == null ||
-            request.getStatus() != FriendRequestEntity.FriendRequestStatus.PENDING) {
+        // 2) Validierung: existiert, und noch PENDING?
+        if (request == null
+            || request.getStatus() != FriendRequestEntity.FriendRequestStatus.PENDING) {
             return false;
         }
 
+        // 3) Request auf ACCEPTED setzen
         request.setStatus(FriendRequestEntity.FriendRequestStatus.ACCEPTED);
+        // (optional) explizit speichern, wird aber durch @Transactional bei Commit geflusht
+        requestRepository.save(request);
 
-        friendshipRepository.save(FriendshipEntity.create(request.getSender(),
-                                                       request.getReceiver()));
+        // 4) Neue Freundschaft anlegen
+        FriendshipEntity friendship = FriendshipEntity.create(
+            request.getSender(),
+            request.getReceiver()
+        );
+        // Jetzt den Status und den Zeitstempel korrekt setzen:
+        friendship.setStatus(FriendshipEntity.Status.ACCEPTED);
+
+        friendshipRepository.save(friendship);
+
         return true;
     }
-
     /**
      * Lehnt eine ausstehende Anfrage ab.
      */
