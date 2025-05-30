@@ -1,8 +1,10 @@
 package client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import common.CardData;
 import common.CardData.Ability;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;

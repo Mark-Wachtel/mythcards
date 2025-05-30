@@ -9,7 +9,6 @@ import com.almasb.fxgl.dsl.components.DraggableComponent;
 import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.texture.Texture;
 
-import common.CardData;
 import javafx.animation.Interpolator;
 import javafx.event.EventType;
 import javafx.geometry.Insets;
@@ -25,6 +24,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.image.ImageView;
 import javafx.util.Duration;
+import common.CardData;
 
 /**
  * Pure view‑layer for a MythCards card.

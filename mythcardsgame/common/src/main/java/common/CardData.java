@@ -2,6 +2,8 @@ package common;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -21,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class CardData {
 
     /* ---------- Primitive card data ---------- */
-    public int    id;
+    public UUID    id;
     public String type;
 
     /** Name‑Key aus JSON (z. B. "Dragoooon!") */
