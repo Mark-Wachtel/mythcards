@@ -26,18 +26,7 @@ spring:
       hibernate.highlight_sql: true           # ANSI-Farben
       # hibernate.generate_statistics: true   # (optional) Query-Stats
 
-  # -------------------------------------------------------------------------
-  # RabbitMQ (AMQP) – Admin & Verbindung
-  # -------------------------------------------------------------------------
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASS:guest}
-
-    admin:
-      enabled: true                           # RabbitAdmin-Bean erzeugen
-
+  
   # -------------------------------------------------------------------------
   # Security / JWT  (Spring-Security-Teil)
   # -------------------------------------------------------------------------

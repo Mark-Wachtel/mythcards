@@ -1,189 +1,126 @@
 package server;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Table(name = "cards")
 public class CardEntity {
-
+    
     @Id
     @GeneratedValue(generator = "UUID")
-    @GenericGenerator(
-        name = "UUID",
-        strategy = "org.hibernate.id.UUIDGenerator"
-    )
-    @Column(name = "id", updatable = false, nullable = false,
-            columnDefinition = "BINARY(16)")
     private UUID id;
-
-    @Column(name = "name_key", nullable = false)
-    private String nameKey;
-
-    @Column(name = "release_key", nullable = false)
-    private String releaseKey;
-
-    @Column(name = "monster_png", nullable = false)
-    private String monsterPng;
-
-    @Column(name = "background_png", nullable = false)
-    private String backgroundPng;
-
-    @Column(name = "logo_png", nullable = false)
-    private String logoPng;
-
+    
     @Column(nullable = false)
-    private short attack;
-
-    @Column(nullable = false)
-    private short defense;
-
-    @Column(nullable = false)
-    private short speed;
-
-    @Column(nullable = false)
-    private short magic;
-
-    @Column(nullable = false)
-    private short health;
-
-    @OneToMany(
-        mappedBy = "card",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true,
-        fetch = FetchType.LAZY
-    )
-    @OrderBy("slot ASC")
-    private List<AbilityEntity> abilities = new ArrayList<>();
-
-    protected CardEntity() {
-        // for JPA
+    private String title;
+    
+    @Column(length = 500)
+    private String description;
+    
+    @Column(name = "image_url")
+    private String imageUrl;
+    
+    @Column(name = "mana_cost")
+    private Integer manaCost;
+    
+    private Integer attack;
+    
+    private Integer defense;
+    
+    @Column(name = "card_type")
+    private String cardType;
+    
+    @ElementCollection
+    @CollectionTable(name = "card_abilities", joinColumns = @JoinColumn(name = "card_id"))
+    @Column(name = "ability")
+    private List<String> abilities;
+    
+    // Konstruktoren
+    public CardEntity() {}
+    
+    public CardEntity(String title, String description, Integer manaCost, 
+                     Integer attack, Integer defense, 
+                     String cardType, List<String> abilities) {
+        this.title = title;
+        this.description = description;
+        this.manaCost = manaCost;
+        this.attack = attack;
+        this.defense = defense;
+        this.cardType = cardType;
+        this.abilities = abilities;
     }
-
-    public CardEntity(String nameKey,
-                      String releaseKey,
-                      String monsterPng,
-                      String backgroundPng,
-                      String logoPng,
-                      short attack,
-                      short defense,
-                      short speed,
-                      short magic,
-                      short health) {
-        this.nameKey       = nameKey;
-        this.releaseKey    = releaseKey;
-        this.monsterPng    = monsterPng;
-        this.backgroundPng = backgroundPng;
-        this.logoPng       = logoPng;
-        this.attack        = attack;
-        this.defense       = defense;
-        this.speed         = speed;
-        this.magic         = magic;
-        this.health        = health;
-    }
-
+    
+    // Getters und Setters
     public UUID getId() {
         return id;
     }
-
-    public String getNameKey() {
-        return nameKey;
+    
+    public void setId(UUID id) {
+        this.id = id;
     }
-
-    public void setNameKey(String nameKey) {
-        this.nameKey = nameKey;
+    
+    public String getTitle() {
+        return title;
     }
-
-    public String getReleaseKey() {
-        return releaseKey;
+    
+    public void setTitle(String title) {
+        this.title = title;
     }
-
-    public void setReleaseKey(String releaseKey) {
-        this.releaseKey = releaseKey;
+    
+    public String getDescription() {
+        return description;
     }
-
-    public String getMonsterPng() {
-        return monsterPng;
+    
+    public void setDescription(String description) {
+        this.description = description;
     }
-
-    public void setMonsterPng(String monsterPng) {
-        this.monsterPng = monsterPng;
+    
+    public String getImageUrl() {
+        return imageUrl;
     }
-
-    public String getBackgroundPng() {
-        return backgroundPng;
+    
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
-
-    public void setBackgroundPng(String backgroundPng) {
-        this.backgroundPng = backgroundPng;
+    
+    public Integer getManaCost() {
+        return manaCost;
     }
-
-    public String getLogoPng() {
-        return logoPng;
+    
+    public void setManaCost(Integer manaCost) {
+        this.manaCost = manaCost;
     }
-
-    public void setLogoPng(String logoPng) {
-        this.logoPng = logoPng;
-    }
-
-    public short getAttack() {
+    
+    public Integer getAttack() {
         return attack;
     }
-
-    public void setAttack(short attack) {
+    
+    public void setAttack(Integer attack) {
         this.attack = attack;
     }
-
-    public short getDefense() {
+    
+    public Integer getDefense() {
         return defense;
     }
-
-    public void setDefense(short defense) {
+    
+    public void setDefense(Integer defense) {
         this.defense = defense;
     }
-
-    public short getSpeed() {
-        return speed;
+    
+    public String getCardType() {
+        return cardType;
     }
-
-    public void setSpeed(short speed) {
-        this.speed = speed;
+    
+    public void setCardType(String cardType) {
+        this.cardType = cardType;
     }
-
-    public short getMagic() {
-        return magic;
-    }
-
-    public void setMagic(short magic) {
-        this.magic = magic;
-    }
-
-    public short getHealth() {
-        return health;
-    }
-
-    public void setHealth(short health) {
-        this.health = health;
-    }
-
-    public List<AbilityEntity> getAbilities() {
+    
+    public List<String> getAbilities() {
         return abilities;
     }
-
-    public void setAbilities(List<AbilityEntity> abilities) {
+    
+    public void setAbilities(List<String> abilities) {
         this.abilities = abilities;
-    }
-
-    public void addAbility(AbilityEntity ability) {
-        ability.setCard(this);
-        this.abilities.add(ability);
-    }
-
-    public void removeAbility(AbilityEntity ability) {
-        ability.setCard(null);
-        this.abilities.remove(ability);
     }
 }

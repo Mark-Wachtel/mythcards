@@ -9,6 +9,7 @@ import server.chat.ConversationRepository;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -65,17 +66,16 @@ public class DataInitializer implements CommandLineRunner {
             );
             userRepo.saveAll(Set.of(admin, user));
 
-            // -------- Card --------
-            CardEntity card = new CardEntity(
-                "Dragoooon!",
-                "01.01.2025",
-                "assets/textures/dragooon.png",
-                "assets/textures/bg.png",
-                "assets/textures/logo.png",
-                (short) 10, (short) 5, (short) 3, (short) 7, (short) 12
-            );
-            card.addAbility(new AbilityEntity(card, (short)1, "fireball", "Burns enemy", "+5"));
-            card.addAbility(new AbilityEntity(card, (short)2, "shield", "Blocks attack", "+3"));
+         // -------- Card --------
+            CardEntity card = new CardEntity();
+            card.setTitle("Dragooon");
+            card.setDescription("Legendary dragon.");          // statt altem releaseKey
+            card.setImageUrl("assets/textures/dragoon.png");   // 1 Bildfeld reicht jetzt
+            card.setManaCost(7);
+            card.setAttack(10);
+            card.setDefense(7);
+            card.setCardType("CREATURE");                      // wähle deinen Typ
+            card.setAbilities(List.of("fireball +5", "shield +3")); // statt AbilityEntity
             cardRepo.save(card);
 
             // -------- Friend Request & Friendship --------

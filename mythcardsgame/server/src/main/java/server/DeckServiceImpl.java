@@ -98,29 +98,46 @@ public class DeckServiceImpl implements DeckService {
         return new DeckDetailDto(deck.getId(), deck.getName(), list);
     }
     
-    /** Mapping­-Helper rein im Server-Modul, common bleibt clean */
+    /** Mapping-Helper rein im Server-Modul, common bleibt clean */
     private CardData mapToCardData(CardEntity e) {
         CardData dto = new CardData();
-        dto.id               = e.getId();          // UUID in common als String/UUID definiert
-        dto.title            = e.getNameKey();
-        dto.releaseKey       = e.getReleaseKey();
-        dto.imagePath        = e.getMonsterPng().replaceFirst("^assets/textures/", "");
-        dto.levelImagePath   = e.getBackgroundPng().replaceFirst("^assets/textures/", "");
-        dto.logoPng          = e.getLogoPng().replaceFirst("^assets/textures/", "");
-        dto.attack           = e.getAttack();
-        dto.def              = e.getDefense();
-        dto.hp               = e.getHealth();
-        dto.magic            = e.getMagic();
-        dto.speed            = e.getSpeed();
-        // Abilities
-        dto.abilities = e.getAbilities().stream().map(a -> {
-            CardData.Ability ab = new CardData.Ability();
-            ab.slot   = a.getSlot();
-            ab.name   = a.getNameKey();
-            ab.effect = a.getDescKey();
-            ab.value  = a.getValueKey();
-            return ab;
-        }).collect(Collectors.toList());
+
+        // IDs & Meta
+        dto.id    = e.getId();                 // CardData.id ist UUID
+        dto.title = e.getTitle();
+        dto.type  = e.getCardType();           // wenn vorhanden
+        dto.releaseKey = null;                 // aktuell nicht in CardEntity
+
+        // Images (CardEntity hat imageUrl; Level/Logo derzeit nicht vorhanden)
+        String img = e.getImageUrl();
+        dto.imagePath      = (img == null) ? null : img.replaceFirst("^assets/textures/", "");
+        dto.levelImagePath = null;
+        dto.logoPng        = null;
+
+        // Stats (Integer → int, null-safe)
+        Integer atk = e.getAttack();
+        Integer def = e.getDefense();
+        Integer hp  = 0;           // in deiner Entity üblich; falls nicht, auf 0
+        dto.attack = (atk != null) ? atk : 0;
+        dto.def    = (def != null) ? def : 0;
+        dto.hp     = (hp  != null) ? hp  : 0;
+        dto.magic  = 0;                        // nicht im Entity → 0
+        dto.speed  = 0;
+
+        // Abilities: aktueller Stand ist List<String>; in CardData brauchen wir Objekte
+        dto.abilities.clear();
+        if (e.getAbilities() != null) {
+            int slot = 1;
+            for (String name : e.getAbilities()) {
+                CardData.Ability ab = new CardData.Ability();
+                ab.slot   = slot++;            // 1,2,3,...
+                ab.name   = name;
+                ab.effect = "";                // derzeit keine Felder im Entity
+                ab.value  = "";
+                dto.abilities.add(ab);
+            }
+        }
+
         return dto;
     }
 }

@@ -1,37 +1,51 @@
 package server;
 
-import java.util.Comparator;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import common.CardDTO;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Service;
-
-import common.AbilityDTO;
-import common.CardDTO;
-
 @Service
 public class CardService {
-
+    
     private final CardRepository repo;
-
-    public CardService(CardRepository r) { this.repo = r; }
-
-    public Optional<CardDTO> getCard(UUID id) {
-        return repo.findWithAbilities(id).map(this::map);
+    
+    public CardService(CardRepository repo) {
+        this.repo = repo;
     }
-
-    private CardDTO map(CardEntity c) {
-        List<AbilityDTO> list = c.getAbilities().stream()
-                .sorted(Comparator.comparing(AbilityEntity::getSlot))
-                .map(a -> new AbilityDTO(a.getNameKey(), a.getDescKey(), a.getValueKey()))
+    
+    public Optional<CardDTO> getCard(UUID id) {
+        return repo.findById(id).map(this::mapToDTO);
+    }
+    
+    public List<CardDTO> getAllCards() {
+        return repo.findAll().stream()
+                .map(this::mapToDTO)
                 .collect(Collectors.toList());
-
-        return new CardDTO(
-                c.getNameKey(), c.getReleaseKey(),
-                c.getMonsterPng(), c.getBackgroundPng(), c.getLogoPng(),
-                c.getAttack(), c.getDefense(), c.getSpeed(), c.getMagic(), c.getHealth(),
-                list);
+    }
+    
+    public Page<CardDTO> getAllCardsPaged(Pageable pageable) {
+        Page<CardEntity> cardPage = repo.findAll(pageable);
+        return cardPage.map(this::mapToDTO);
+    }
+    
+    private CardDTO mapToDTO(CardEntity entity) {
+        CardDTO dto = new CardDTO();
+        dto.setId(entity.getId());
+        dto.setTitle(entity.getTitle());
+        dto.setDescription(entity.getDescription());
+        dto.setImageUrl(entity.getImageUrl());
+        dto.setManaCost(entity.getManaCost());
+        dto.setAttack(entity.getAttack());
+        dto.setDefense(entity.getDefense());
+        dto.setCardType(entity.getCardType());
+        dto.setAbilities(entity.getAbilities());
+        return dto;
     }
 }

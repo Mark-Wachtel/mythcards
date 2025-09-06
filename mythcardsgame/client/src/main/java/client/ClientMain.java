@@ -259,6 +259,7 @@ public class ClientMain extends GameApplication {
         logoutBtn.setOnAction(e -> logout());
         btnHome.setOnAction(e -> root.setCenter(new StackPane(new Label("Willkommen im Hauptmenü!"))));
         btnProfile.setOnAction(e -> root.setCenter(createProfileView()));
+        btnDecks.setOnAction(e -> root.setCenter(new DeckBuilderView(currentUserId, accessToken)));
 
         HBox topBar = new HBox(10, btnHome, btnProfile, btnDecks, btnPlay, btnSettings, logoutBtn);
         topBar.setPadding(new Insets(10));
